@@ -1,11 +1,13 @@
 
-/* Padel Booking Leon — v1.12 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.13 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
   const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false,courtDetails:new Map(),lastResults:[],quoteLoading:false,quoteProgress:0,quoteTotal:0};
   let quoteGeneration=0;
+  let bookingSelection=null;
+  let bookingCheckSerial=0;
   let toastTimer;
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
@@ -117,8 +119,7 @@
           </div>
           <div class="slot-controls">
             <button type="button" data-edit-court="${esc(s.court_id)}" data-court-club="${esc(r.club_id)}">⚙ Dettagli</button>
-            <a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer"
-              title="Apre il portale ufficiale: selezionare e confermare qui il campo">Prenota sul sito ↗</a>
+            <button type="button" data-booking-court="${esc(s.court_id)}" data-booking-club="${esc(r.club_id)}" data-booking-start="${esc(s.start)}">Prenota ↗</button>
           </div></div>`;
       }).join('');
       return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
@@ -126,6 +127,84 @@
         ${!found?`<a target="_blank" rel="noopener noreferrer" href="${esc(club?.url||'#')}">Apri il portale ↗</a>`:''}
         </div><span class="result-tag">${esc(status)}</span></div>`;
     }).join('');
+  }
+
+  function getBookingSlot(clubId,courtId,start){
+    const row=state.lastResults.find(r=>r.club_id===clubId&&r.status==='available');
+    return row?.slots?.find(s=>String(s.court_id)===String(courtId)&&s.start===start)||null;
+  }
+  function bookingStatus(message,level='info'){
+    const el=$('bookingStatus');
+    el.textContent=message;
+    el.dataset.level=level;
+  }
+  function bookingText(){
+    if(!bookingSelection)return '';
+    const {club,slot,location,cover}=bookingSelection;
+    const price=slot.quotePrice||slot.price||'da verificare sul portale';
+    return ['Padel Booking Leon — richiesta di prenotazione','Centro: '+club.name,
+      'Campo: '+slot.court,'Località: '+location,'Copertura: '+cover,
+      'Data: '+slot.date,'Orario: '+slot.start+'–'+slot.end,
+      'Durata: '+slot.duration+' minuti','Prezzo: '+price,
+      'Portale: '+club.url,'La prenotazione NON è stata effettuata.'].join('\\n');
+  }
+  function openBooking(clubId,courtId,start){
+    const slot=getBookingSlot(clubId,courtId,start);
+    const club=state.clubs.find(c=>c.id===clubId);
+    if(!slot||!club)return toast('Fascia non più presente nella ricerca. Ripetere il controllo.',true);
+    const note=state.courtDetails.get(detailKey(clubId,courtId));
+    const location=courtLocation(slot,clubId,note);
+    const cover=note?.cover&&note.cover!=='unknown'?note.cover:(slot.cover||'unknown');
+    const roof=cover==='indoor'?'Coperto':cover==='outdoor'?'Scoperto':'Da verificare';
+    const price=slot.quotePrice||slot.price||
+      (note?.price?note.price+' € (indicativo)':'Da verificare sul portale');
+    bookingSelection={club,slot,location,cover:roof};
+    bookingCheckSerial++;
+    $('bookingTitle').textContent=club.name;
+    $('bookingSummary').innerHTML=[
+      ['Campo',slot.court],['Sede',location],['Copertura',roof],['Data',slot.date],
+      ['Orario',slot.start+'–'+slot.end],['Durata',slot.duration+' minuti'],['Prezzo',price]
+    ].map(([k,v])=>'<div class="booking-summary-line"><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join('');
+    $('bookingOpen').href=club.url;
+    $('bookingRecheck').disabled=false;
+    bookingStatus('Disponibilità rilevata durante la ricerca, ma non riservata. Ricontrolli prima di procedere.');
+    $('bookingDialog').showModal();
+  }
+  async function bookingRecheck(){
+    if(!bookingSelection)return;
+    const {club,slot}=bookingSelection;
+    const serial=++bookingCheckSerial;
+    const button=$('bookingRecheck');
+    button.disabled=true;
+    bookingStatus('Verifica della disponibilità aggiornata…');
+    try{
+      let confirmed=false,reason='';
+      if(club.id==='hero'){
+        const result=await window.PBL_CHROME.query({
+          date:slot.date,time:slot.start,duration:Number(slot.duration),tolerance:0});
+        confirmed=result.status==='available'&&result.slots.some(x=>
+          x.court_id===slot.court_id&&x.start===slot.start&&x.duration===slot.duration);
+        reason=result.reason||'';
+      }else{
+        const result=await api('getBookingPreflight',{
+          club_id:club.id,court_id:String(slot.court_id),date:slot.date,
+          start:slot.start,duration:Number(slot.duration)});
+        confirmed=result.status==='available';
+        reason=result.reason||'';
+      }
+      if(serial!==bookingCheckSerial)return;
+      bookingStatus(confirmed?
+        'Disponibilità confermata dal calendario. Non è una prenotazione: confermi e paghi sul portale ufficiale.':
+        'Disponibilità non confermata. '+reason,confirmed?'ok':'warning');
+    }catch(e){
+      if(serial===bookingCheckSerial)bookingStatus('Impossibile verificare ora: '+e.message,'warning');
+    }finally{if(serial===bookingCheckSerial)button.disabled=false;}
+  }
+  async function bookingCopy(){
+    const content=bookingText();
+    if(!content)return;
+    try{await navigator.clipboard.writeText(content);toast('Riepilogo copiato. Nessuna prenotazione effettuata.');}
+    catch(e){toast('Copia non disponibile: selezioni i dettagli manualmente.',true);}
   }
   function openCourtDetails(clubId,courtId){
     const r=state.lastResults.find(x=>x.club_id===clubId);
@@ -341,14 +420,17 @@
     $('searchForm').addEventListener('submit',search);$('jobForm').addEventListener('submit',saveRequest);
     $('wansportForm').addEventListener('submit',saveAndTestWansport);$('wansportDelete').addEventListener('click',removeWansport);
     $('courtForm').addEventListener('submit',saveCourt);
+    $('bookingCopy').addEventListener('click',bookingCopy);
+    $('bookingRecheck').addEventListener('click',bookingRecheck);
     $('clubForm').addEventListener('submit',saveClub);$('editRule').addEventListener('change',changeRule);
     ['jobDate','jobTime','jobClubChoices'].forEach(id=>$(id).addEventListener('change',previewOpening));
     $('schedulerBtn').addEventListener('click',()=>{$('schedulerDialog').showModal();schedulerState();});
     $('enableScheduler').addEventListener('click',()=>scheduler(true));$('disableScheduler').addEventListener('click',()=>scheduler(false));
     $('refreshBtn').addEventListener('click',loadAll);
-    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-edit-court],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
+    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-edit-court],[data-booking-court],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
       if(t.dataset.editClub)editClub(t.dataset.editClub);
       if(t.dataset.editCourt)openCourtDetails(t.dataset.courtClub,t.dataset.editCourt);
+      if(t.dataset.bookingCourt)openBooking(t.dataset.bookingClub,t.dataset.bookingCourt,t.dataset.bookingStart);
       if(t.dataset.detail)detail(t.dataset.detail);
       if(t.dataset.cancel)cancel(t.dataset.cancel);
       if(t.dataset.probe)probe(t.dataset.probe);
