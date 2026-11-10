@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.14 — assistenza locale Wansport, senza credenziali e senza conferme.
+/* Padel Booking Leon v1.15 — assistenza locale Wansport, senza credenziali e senza conferme.
  * L'estensione mostra la scelta del giocatore sul portale ufficiale.
  * Cerca soltanto un riferimento DOM esatto a tslotId, senza inventare un link profondo.
  */
