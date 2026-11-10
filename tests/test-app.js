@@ -47,16 +47,17 @@ const code=fs.readFileSync(path.join(__dirname,'../apps-script/Code.gs'),'utf8')
 new vm.Script(code,{filename:'Code.gs'}).runInContext(context);
 new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/Gunners.gs'),'utf8'),{filename:'Gunners.gs'}).runInContext(context);
 new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/WansportExtra.gs'),'utf8'),{filename:'WansportExtra.gs'}).runInContext(context);
+new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/Playtomic.gs'),'utf8'),{filename:'Playtomic.gs'}).runInContext(context);
 const run=s=>vm.runInContext(s,context);
 
 test('Google Sheets creato e 4 club senza regole presunte',()=>{
   const setup=run('setupApp()');assert.match(setup.spreadsheetUrl,/docs.google.com/);
-  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.6');assert.equal(dashboard.clubs.length,4);
+  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.7');assert.equal(dashboard.clubs.length,4);
   assert.ok(dashboard.clubs.every(c=>!c.connector.ready&&c.rule_type==='unknown'));
 });
 test('Ricerca reale non simulata',()=>{
   const result=run(`searchAvailability({date:'2099-11-17',time:'20:00',duration:90,tolerance:30,clubs:['gunners','hero']})`);
-  assert.equal(result.results.length,2);assert.equal(result.results[0].status,'auth_required');assert.equal(result.results[1].status,'not_configured');
+  assert.equal(result.results.length,2);assert.equal(result.results[0].status,'auth_required');assert.equal(result.results[1].status,'error');
   assert.ok(result.results.every(r=>r.slots.length===0));
 });
 test('Finestra a giorni di calendario Europe/Rome',()=>{
