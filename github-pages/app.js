@@ -98,7 +98,7 @@
         const location=courtLocation(s,r.club_id,note);
         const cover=note?.cover&&note.cover!=='unknown'?note.cover:(s.cover||'unknown');
         const roof=cover==='indoor'?'Coperto':cover==='outdoor'?'Scoperto':'Copertura da verificare';
-        const price=s.price?String(s.price):note?.price?String(note.price).replace(/\\s?€$/,'')+' €':'Da verificare';
+        const price=s.price?String(s.price):note?.price?String(note.price).replace(/\s?€$/,'')+' €':'Da verificare';
         const origin=s.price?'Prezzo portale':note?.price?'Prezzo indicativo · nota personale':'Prezzo non disponibile';
         return `<div class="slot-line"><div><strong>${esc(s.court)}</strong><div class="slot-details">
               <span>📍 ${esc(location)}</span><span>${esc(roof)}</span></div></div>
@@ -121,7 +121,7 @@
     const slot=r?.slots?.find(x=>String(x.court_id)===String(courtId));
     if(!slot)return;
     const note=state.courtDetails.get(detailKey(clubId,courtId));
-    $('courtClubId').value=clubId;$('courtResourceId').value=courtId;
+    $('courtClubId').value=clubId;$('courtResourceId').value=courtId;$('courtDuration').value=String(slot.duration);
     $('courtDialogTitle').textContent=slot.court;
     $('courtLocation').value=note?.location||courtLocation(slot,clubId,null);
     $('courtCover').value=note?.cover||'unknown';
@@ -131,7 +131,8 @@
   async function saveCourt(e){
     e.preventDefault();
     const data={club_id:$('courtClubId').value,court_id:$('courtResourceId').value,
-      location:$('courtLocation').value,cover:$('courtCover').value,price:$('courtPrice').value};
+      location:$('courtLocation').value,cover:$('courtCover').value,price:$('courtPrice').value,
+      duration:Number($('courtDuration').value)};
     try{
       const response=await api('saveCourtDetails',data);
       state.courtDetails.set(detailKey(data.club_id,data.court_id),response);
@@ -158,9 +159,10 @@
       const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
       if(clubs.includes('hero'))renderClubs();
       state.lastResults=results;
-      const keys=results.flatMap(r=>(r.slots||[]).map(slot=>({club_id:r.club_id,court_id:String(slot.court_id)})));
+      const keys=results.flatMap(r=>(r.slots||[]).map(slot=>({club_id:r.club_id,court_id:String(slot.court_id),duration:Number(slot.duration)})));
+      const uniqueKeys=[...new Map(keys.map(k=>[detailKey(k.club_id,k.court_id),k])).values()];
       try{
-        const notes=keys.length?await api('getCourtDetails',keys):[];
+        const notes=uniqueKeys.length?await api('getCourtDetails',uniqueKeys):[];
         state.courtDetails=new Map(notes.map(n=>[detailKey(n.club_id,n.court_id),n]));
       }catch(err){state.courtDetails=new Map();toast('Annotazioni campi non caricate: '+err.message,true);}
       renderResults();
