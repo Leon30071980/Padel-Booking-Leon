@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Padel Booking Leon - Playtomic",
+  "version": "1.8.0",
+  "description": "Disponibilità Padel Hero Parma in sola lettura nella app Padel Booking Leon. Nessun login.",
+  "host_permissions": [
+    "https://playtomic.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leon30071980.github.io/Padel-Booking-Leon/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}
