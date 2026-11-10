@@ -209,7 +209,7 @@
       return;
     }
     // Chrome richiede un'azione esplicita dell'utente; non si procede in background.
-    if(!window.PBL_CHROME?.handoff)return;
+    if(!window.PBL_CHROME?.handoff||!window.PBL_CHROME.installed())return;
     event.preventDefault();
     const button=$('bookingOpen');
     button.textContent='Apertura…';
@@ -221,8 +221,7 @@
       });
       toast('Wansport aperto: la guida del campo è visibile sulla nuova scheda.');
     }catch(err){
-      toast('Estensione non aggiornata: apertura del sito ufficiale.',true);
-      window.open(club.url,'_blank','noopener,noreferrer');
+      toast('Guida non disponibile: utilizzi il link ufficiale del circolo e selezioni lo slot manualmente.',true);
     }finally{
       button.textContent='Apri fascia su Wansport ↗';
     }
