@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.12 · MV3: Playtomic solo GET, senza cookie o password. */
+/* Padel Booking Leon v1.13 · MV3: Playtomic solo GET, senza cookie o password. */
 'use strict';
 const CHANNEL='pbl-playtomic-chrome-v1';
 const ORIGIN='https://leon30071980.github.io';

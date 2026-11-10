@@ -56,3 +56,15 @@
  .slot-heading strong{max-width:100%}
  .slot-controls{justify-content:flex-start}
 }
+
+/* v1.13 — riepilogo prima dell'apertura del portale ufficiale */
+.booking-dialog{width:min(550px,calc(100vw - 24px));max-height:90vh}
+.booking-summary{display:flex;flex-direction:column;gap:0;border:1px solid #375d46;border-radius:12px;padding:5px 14px;margin:15px 0;background:#142820}
+.booking-summary-line{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:9px 0;border-bottom:1px solid #31503e;font-size:13px}
+.booking-summary-line:last-child{border:0}
+.booking-summary-line span{color:#bad5c4;flex:0 0 80px}
+.booking-summary-line strong{text-align:right;overflow-wrap:anywhere}
+.booking-actions{display:flex;gap:9px;flex-wrap:wrap}
+.booking-actions>*{flex:1 1 125px;justify-content:center;text-align:center}
+#bookingStatus[data-level="ok"]{color:#b9ff9e}
+#bookingStatus[data-level="warning"]{color:#ffcab0}

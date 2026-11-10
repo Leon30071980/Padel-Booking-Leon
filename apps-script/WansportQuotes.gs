@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.12 — quotazioni Pro Padel, SOLA LETTURA.
+ * Padel Booking Leon v1.13 — quotazioni Pro Padel, SOLA LETTURA.
  * L'app interroga il GET del modale soltanto per slot risultati disponibili.
  * Per 90/120 minuti il parametro duration=<minuti> è sperimentale:
  * prezzi restituiti solo se l'API conferma precisamente ora iniziale/finale.
