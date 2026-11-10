@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.11 — Playtomic read-only mock tests. */
+/* Padel Booking Leon v1.12 — Playtomic read-only mock tests. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 let mockStatus=200, mockBody=[], requests=[];
 const day='2026-11-11', resource='5264d11d-27cd-43e3-952e-6d41faf0da95';
@@ -76,4 +76,4 @@ test('Test collegamento misura accessibilita cloud con risposta reale mock',()=>
  mockBody=valid();const r=run('testPlaytomicConnection()');assert.equal(r.ok,true);
  mockStatus=403;const fail=run('testPlaytomicConnection()');assert.equal(fail.ok,false);mockStatus=200;
 });
-console.log('Playtomic v1.11: '+tests+' test superati.');
+console.log('Playtomic v1.12: '+tests+' test superati.');
