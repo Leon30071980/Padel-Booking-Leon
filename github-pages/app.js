@@ -4,7 +4,7 @@
   'use strict';
   const $ = id=>document.getElementById(id);
   const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const state={clubs:[],jobs:[],schedulerActive:false,online:false};
+  const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false};
   let toastTimer;
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
@@ -23,16 +23,20 @@
   function choices(id){
     const previous=new Set(selected(id));
     $(id).innerHTML=state.clubs.map(c=>`<label class="choice"><input type="checkbox" value="${esc(c.id)}" ${previous.size?previous.has(c.id)?'checked':'':c.enabled?'checked':''} ${c.enabled?'':'disabled'}><span>${esc(c.name)}</span></label>`).join('');
+    if(id==='jobClubChoices'){
+      const hero=$(id).querySelector('input[value="hero"]');
+      if(hero){hero.checked=false;hero.disabled=true;hero.closest('label').title='Padel Hero richiede Chrome attivo e non è programmabile sul backend cloud.';}
+    }
   }
   function selected(id){return Array.from($(id).querySelectorAll('input:checked:not(:disabled)')).map(e=>e.value);}
   function renderClubs(){
     $('metricClubs').textContent=state.clubs.length;
-    const verified=state.clubs.filter(c=>c.connector.ready).length;
+    const verified=state.clubs.filter(c=>c.id==='hero'?state.playtomicLive:c.connector.ready).length;
     $('metricReady').innerHTML=verified+'<span class="metric-suffix"> / '+state.clubs.length+'</span>';
     $('clubGrid').innerHTML=state.clubs.map(c=>{
-      const connected=c.platform==='Playtomic'?!!window.PBL_CHROME?.installed():c.connector.ready, configured=c.connector.configured;
+      const connected=c.platform==='Playtomic'?state.playtomicLive:c.connector.ready, configured=c.connector.configured;
       const isWS=c.platform==='Wansport';
-      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):(window.PBL_CHROME?.installed()?'Estensione Chrome collegata (solo lettura)':'Estensione Chrome necessaria su questo dispositivo');
+      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):(connected?'Calendario Playtomic letto da Chrome':window.PBL_CHROME?.installed()?'Estensione Chrome rilevata: verificare il calendario':'Estensione Chrome necessaria su questo dispositivo');
       return `<article class="club-card"><div class="club-top"><span class="platform-tag">${esc(c.platform)}</span><span class="club-priority">PRIORITÀ ${c.priority}</span></div>
       <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
       <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
@@ -89,9 +93,11 @@
         :Promise.resolve(null));
       const remote=otherClubs.length?await api('searchAvailability',{...req,clubs:otherClubs}):{results:[]};
       const heroResults=await Promise.all(work);
+      if(clubs.includes('hero'))state.playtomicLive=heroResults.some(r=>r&&r.club_id==='hero'&&['available','no_slots'].includes(r.status));
       const remoteById=new Map(remote.results.map(r=>[r.club_id,r]));
       const hero=heroResults.find(r=>r&&r.club_id==='hero');
       const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
+      if(clubs.includes('hero'))renderClubs();
       $('searchResults').innerHTML=results.map(r=>{
         const club=state.clubs.find(c=>c.id===r.club_id);
         const found=r.status==='available';
@@ -152,10 +158,11 @@
       const result=await window.PBL_CHROME.query({
         date:romeDate(1),time:'19:00',duration:90,tolerance:60
       });
+      state.playtomicLive=['available','no_slots'].includes(result.status);
       toast(result.status==='available'?'Playtomic accessibile da Chrome: slot ottenuti.':
         'Estensione funzionante: nessuno slot compatibile per il test.');
       renderClubs();
-    }catch(err){toast(err.message,true);}
+    }catch(err){state.playtomicLive=false;toast(err.message,true);renderClubs();}
   }
   async function scheduler(enabled){
     try{const data=await api(enabled?'installScheduler':'removeScheduler');state.schedulerActive=data.installed;schedulerState();toast(enabled?'Trigger di controllo attivato':'Trigger disattivato');}
