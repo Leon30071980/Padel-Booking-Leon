@@ -168,12 +168,17 @@ function gunnersSlots_(data,day,preferred,duration,tolerance){
         }
         if(!valid||intervals.some(([a,b])=>Number.isFinite(a)&&Number.isFinite(b)&&start<b&&start+duration>a))continue;
         const hm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
-        // Dettagli presenti nella risposta calendario: non dedurre copertura da un ID.
-        const cover=typeof resource.coperto==='boolean'?(resource.coperto?'indoor':'outdoor'):
+        // Preferire i metadati espliciti. Il nome campo può fornire un'indicazione
+        // di copertura ("Coperto", "Open") ma potrebbe variare stagionalmente.
+        const courtName=String(resource.nome||('Campo '+resource.id));
+        const explicitCover=typeof resource.coperto==='boolean'?(resource.coperto?'indoor':'outdoor'):
           typeof resource.indoor==='boolean'?(resource.indoor?'indoor':'outdoor'):'unknown';
-        result.push({court_id:String(resource.id),court:String(resource.nome||('Campo '+resource.id)),start:hm(start),end:hm(start+duration),
+        const namedCover=/\\b(?:coperto|indoor)\\b/i.test(courtName)?'indoor':
+          /\\b(?:scoperto|open|outdoor)\\b/i.test(courtName)?'outdoor':'unknown';
+        const cover=explicitCover!=='unknown'?explicitCover:namedCover;
+        result.push({court_id:String(resource.id),court:courtName,start:hm(start),end:hm(start+duration),
           duration,club_id:'gunners',date:day,venue:String(sede.nome||'').slice(0,90),
-          cover,price:''});
+          cover,cover_source:explicitCover!=='unknown'?'calendario':namedCover!=='unknown'?'nome campo':'unknown',price:''});
       }
     }
   }
