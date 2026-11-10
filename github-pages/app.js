@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.14 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.15 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -221,9 +221,13 @@
       });
       toast('Wansport aperto: la guida del campo è visibile sulla nuova scheda.');
     }catch(err){
-      toast('Guida non disponibile: utilizzi il link ufficiale del circolo e selezioni lo slot manualmente.',true);
+      const reason=String(err?.message||'Errore sconosciuto').slice(0,240);
+      toast('Guida Wansport: '+reason,true);
+      bookingStatus('Impossibile aprire la guida: '+reason+'. In alternativa utilizzi il sito ufficiale.', 'warning');
+      button.href=club.url;
+      button.textContent='Apri portale ufficiale ↗';
     }finally{
-      button.textContent='Apri fascia su Wansport ↗';
+      if(button.textContent==='Apertura…')button.textContent='Apri fascia su Wansport ↗';
     }
   }
   async function bookingCopy(){
