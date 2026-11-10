@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Padel Booking Leon - Playtomic",
-  "version": "1.13.0",
-  "description": "Disponibilità Padel Hero Parma in sola lettura nella app Padel Booking Leon. Nessun login.",
+  "name": "Padel Booking Leon - Playtomic e Wansport",
+  "version": "1.14.0",
+  "description": "Disponibilità Playtomic e apertura assistita del campo Wansport; nessuna conferma automatica.",
   "host_permissions": [
     "https://playtomic.com/*"
   ],
@@ -18,6 +18,21 @@
         "content.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://gunnerspadel.wansport.com/*",
+        "https://propadelclub.wansport.com/*",
+        "https://puntogpadel.wansport.com/*"
+      ],
+      "js": [
+        "wansport-handoff.js"
+      ],
+      "run_at": "document_idle"
     }
+  ],
+  "permissions": [
+    "storage",
+    "tabs"
   ]
 }

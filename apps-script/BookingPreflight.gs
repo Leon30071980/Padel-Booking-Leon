@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.13 — verifica preliminare di prenotabilità.
+ * Padel Booking Leon v1.14 — verifica preliminare di prenotabilità.
  *
  * SOLO LETTURA: nessun POST, addebito, creazione, pre-autorizzazione o blocco campo.
  * Il risultato descrive uno slot osservato nel calendario e NON garantisce
