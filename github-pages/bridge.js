@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.6 — browser bridge: no public credentials or API tokens. */
+/* Padel Booking Leon v1.7 — browser bridge: no public credentials or API tokens. */
 (function(){
   'use strict';
   const CHANNEL='pbl-google-bridge-v1';
@@ -9,7 +9,7 @@
     'getDashboard','getOpeningPreview','searchAvailability','createRequest',
     'saveClubRule','getRequestDetail','cancelRequest','checkPublicPortal',
     'installScheduler','removeScheduler','saveWansportCredentials',
-    'testWansportConnection','deleteWansportCredentials'
+    'testWansportConnection','deleteWansportCredentials','testPlaytomicConnection'
   ]);
   let url=localStorage.getItem(STORE)||'';
   let iframe=null, nonce='', remoteWindow=null, remoteOrigin='', connecting=null;

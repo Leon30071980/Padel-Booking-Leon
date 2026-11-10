@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.6 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.7 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G da validare.
  */
-const PBL_VERSION = 'v1.6';
+const PBL_VERSION = 'v1.7';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -120,7 +120,7 @@ function fullClubs_(){
     return {...c, priority:Number(r.priority)||i+1, enabled:r.enabled!=='false',
       rule_type:r.rule_type||'unknown',advance_value:r.advance_value?Number(r.advance_value):null,
       release_time:r.release_time||'00:01',
-      connector:c.id==='gunners' ? gunnersConnectionStatus_() : (c.id==='pro'||c.id==='puntog') ? extraConnStatus_(c.id) : {ready:false,configured:false,booking_ready:false,reason:'Nessuna integrazione autenticata verificata'}};
+      connector:c.id==='gunners' ? gunnersConnectionStatus_() : (c.id==='pro'||c.id==='puntog') ? extraConnStatus_(c.id) : c.id==='hero' ? playtomicConnectionStatus_() : {ready:false,configured:false,booking_ready:false,reason:'Connettore non disponibile'}};
   }).sort((a,b)=>a.priority-b.priority);
 }
 function setupApp(){
@@ -253,11 +253,12 @@ function recalculate_(clubId){
 function searchClubAvailability_(id,request){
   if(id==='gunners')return searchGunners_(request);
   if(id==='pro'||id==='puntog')return searchExtraWansport_(id,request);
+  if(id==='hero')return searchPlaytomic_(request);
   return {club_id:id,status:'not_configured',slots:[],
-    reason:'Playtomic non collegato. Aprire il portale per verificare la disponibilità.'};
+    reason:'Connettore non disponibile.'};
 }
 /**
- * v1.6: controllo una tantum ALL'APERTURA TEORICA, non monitoraggio continuo.
+ * v1.7: controllo una tantum ALL'APERTURA TEORICA, non monitoraggio continuo.
  * Trigger a minuto non preciso; nessun addebito o prenotazione.
  * Esegue al massimo 3 ricerche live per tick per rispettare limiti Apps Script.
  */
