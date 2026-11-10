@@ -23,4 +23,13 @@ for(const value of [
 assert.ok(script.includes('event.origin') && script.includes('msg.nonce!==nonce'));
 assert.ok(script.includes('allowedActions.has(action)'));
 assert.ok(fs.readFileSync('apps-script/Bridge.html','utf8').includes('event.source!==window.top'));
-console.log('Ponte: validazione URL, origine e nonce, allowlist e contenuti statici OK.');
+// v1.6: il pannello rimane disponibile, ma si richiude automaticamente con connessione valida.
+const html=fs.readFileSync('github-pages/index.html','utf8');
+const css=fs.readFileSync('github-pages/styles.css','utf8');
+assert.match(html,/id="backendSettingsBtn"/);
+assert.match(html,/aria-controls="backendPanel"/);
+assert.match(css,/\.github-connect\[hidden\]\s*\{display:none!important\}/);
+assert.match(script,/function panelVisible\(open\)/);
+assert.match(script,/panelVisible\(!ready\)/);
+assert.match(script,/\$\('backendSettingsBtn'\)\.addEventListener\('click'/);
+console.log('Ponte v1.6: sicurezza, pannello compatto e pulsante impostazioni OK.');
