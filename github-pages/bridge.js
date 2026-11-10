@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.15 — browser bridge: no public credentials or API tokens. */
+/* Padel Booking Leon v1.16 — browser bridge: no public credentials or API tokens. */
 (function(){
   'use strict';
   const CHANNEL='pbl-google-bridge-v1';
