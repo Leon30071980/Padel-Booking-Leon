@@ -1,4 +1,4 @@
-/* v1.8 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
+/* v1.9 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
