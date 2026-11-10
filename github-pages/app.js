@@ -1,10 +1,11 @@
 
-/* Padel Booking Leon — v1.11 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.12 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
   const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false,courtDetails:new Map(),lastResults:[]};
+  const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false,courtDetails:new Map(),lastResults:[],quoteLoading:false,quoteProgress:0,quoteTotal:0};
+  let quoteGeneration=0;
   let toastTimer;
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
@@ -99,9 +100,14 @@
         const cover=note?.cover&&note.cover!=='unknown'?note.cover:(s.cover||'unknown');
         const roof=cover==='indoor'?'Coperto':cover==='outdoor'?'Scoperto':'Copertura da verificare';
         const price=s.quotePrice?String(s.quotePrice):s.price?String(s.price):
-          note?.price?String(note.price).replace(/\s?€$/,'')+' €':'Da verificare';
+          note?.price?String(note.price).replace(/\s?€$/,'')+' €':
+          s.quoteState==='loading'?'Calcolo in corso…':
+          s.quoteState==='queued'?'In attesa…':'Da verificare';
         const origin=s.quotePrice?'Preventivo Wansport · profilo corrente':s.price?'Prezzo portale':
-          note?.price?'Prezzo indicativo · nota personale':'Prezzo non disponibile';
+          note?.price?'Prezzo indicativo · nota personale':
+          s.quoteState==='unavailable'?'Preventivo non disponibile':
+          s.quoteState==='pending'?'Verifica non avviata':
+          s.quoteState==='loading'||s.quoteState==='queued'?'Lettura automatica e sicura':'Prezzo non disponibile';
         return `<div class="slot-line">
           <div class="slot-heading"><strong>${esc(s.court)}</strong><span class="slot-time">${esc(s.start)}–${esc(s.end)}</span></div>
           <div class="slot-metadata">
@@ -110,7 +116,6 @@
             <span class="slot-chip"><strong class="slot-price">${esc(price)}</strong> <small>${esc(origin)}</small></span>
           </div>
           <div class="slot-controls">
-            ${r.club_id==='pro'&&Number(s.duration)===60?'<button type="button" data-quote-court="'+esc(s.court_id)+'" data-quote-start="'+esc(s.start)+'">€ Verifica prezzo</button>':''}
             <button type="button" data-edit-court="${esc(s.court_id)}" data-court-club="${esc(r.club_id)}">⚙ Dettagli</button>
             <a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer"
               title="Apre il portale ufficiale: selezionare e confermare qui il campo">Prenota sul sito ↗</a>
@@ -147,6 +152,7 @@
   }
   async function search(e){
     e.preventDefault();const clubs=selected('searchClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
+    const generation=++quoteGeneration;
     const btn=$('searchBtn');btn.disabled=true;$('searchResults').textContent='Controllo dei calendari abilitati…';
     try{
       const req={date:$('searchDate').value,time:$('searchTime').value,
@@ -171,25 +177,73 @@
         const notes=uniqueKeys.length?await api('getCourtDetails',uniqueKeys):[];
         state.courtDetails=new Map(notes.map(n=>[detailKey(n.club_id,n.court_id),n]));
       }catch(err){state.courtDetails=new Map();toast('Annotazioni campi non caricate: '+err.message,true);}
+      // Le prime 9 disponibilità di Pro vengono quotate in 3 batch max.
+      for(const r of results.filter(r=>r.club_id==='pro'))
+        for(const slot of r.slots||[])slot.quoteState='pending';
       renderResults();
+      // I calendari sono già visibili: il calcolo prezzi prosegue a piccoli gruppi.
+      if(results.some(r=>r.club_id==='pro'&&r.status==='available')){
+        loadAutomaticQuotes(generation).catch(err=>{
+          if(generation===quoteGeneration)toast('Prezzi Pro Padel non disponibili: '+err.message,true);
+        });
+      }
       // Aggiorna gli stati dei collegamenti Wansport senza duplicare le richieste HTTP.
       if(clubs.some(id=>['gunners','pro','puntog'].includes(id)))await loadAll();
     }catch(e){toast(e.message,true);$('searchResults').textContent=e.message;}finally{btn.disabled=false;btn.textContent='⌕ Verifica disponibilità';}
   }
-  async function quoteCourt(courtId,start,button){
-    const row=state.lastResults.find(x=>x.club_id==='pro');
-    const slot=row?.slots?.find(s=>String(s.court_id)===String(courtId)&&s.start===start&&Number(s.duration)===60);
-    if(!slot){toast('Lo slot non è più disponibile nella ricerca corrente.',true);return;}
-    button.disabled=true;button.textContent='Verifica prezzo…';
-    try{
-      const result=await api('getWansportQuote',{club_id:'pro',court_id:String(courtId),
-        date:slot.date,start:slot.start,duration:60});
-      if(result.club_id!=='pro'||result.court_id!==String(courtId)||result.date!==slot.date||
-         result.start!==slot.start||result.duration!==60)throw Error('Risposta prezzo non corrispondente alla richiesta.');
-      slot.quotePrice=result.price;
+  // Prezzi recuperati progressivamente, evitando richieste per ogni singola card
+  // in parallelo e mantenendo indipendenti i calendari Wansport / Chrome.
+  async function loadAutomaticQuotes(generation){
+    const row=state.lastResults.find(r=>r.club_id==='pro'&&r.status==='available');
+    if(!row?.slots?.length)return;
+    // Al massimo 9 preventivi per ricerca: 3 chiamate batch, per non saturare Wansport.
+    const targets=row.slots.slice(0,9).filter(s=>[60,90,120].includes(Number(s.duration)));
+    if(!targets.length)return;
+    state.quoteLoading=true;state.quoteProgress=0;state.quoteTotal=targets.length;
+    const groupSize=3;
+    for(let i=0;i<targets.length;i+=groupSize){
+      if(generation!==quoteGeneration)return;
+      const batch=targets.slice(i,i+groupSize);
+      for(const slot of batch)slot.quoteState='loading';
       renderResults();
-      toast('Preventivo aggiornato: '+result.price+'. La prenotazione non è stata effettuata.');
-    }catch(err){toast('Preventivo non disponibile: '+err.message,true);button.disabled=false;button.textContent='€ Verifica prezzo';}
+      try{
+        const payload={club_id:'pro',date:batch[0].date,slots:batch.map(slot=>({
+          court_id:String(slot.court_id),start:slot.start,duration:Number(slot.duration)
+        }))};
+        const reply=await api('getWansportQuotesBatch',payload);
+        if(generation!==quoteGeneration)return;
+        const matches=new Map((reply.quotes||[]).map(item=>[
+          item.court_id+'|'+item.start+'|'+item.duration,item]));
+        for(const slot of batch){
+          const quote=matches.get(String(slot.court_id)+'|'+slot.start+'|'+slot.duration);
+          if(quote?.ok===true&&typeof quote.price==='string'&&quote.date===slot.date){
+            slot.quotePrice=quote.price;slot.quoteState='ready';
+          }else{
+            slot.quoteState='unavailable';
+            slot.quoteReason=quote?.error||'Preventivo non restituito.';
+          }
+        }
+        state.quoteProgress+=batch.length;
+        renderResults();
+        if(reply.rate_limited){
+          for(const rest of targets.slice(i+groupSize)){rest.quoteState='unavailable';rest.quoteReason='Lettura limitata dal portale.';}
+          break;
+        }
+      }catch(err){
+        if(generation!==quoteGeneration)return;
+        for(const slot of batch){slot.quoteState='unavailable';slot.quoteReason=String(err.message||err).slice(0,140);}
+        state.quoteProgress+=batch.length;renderResults();
+        // Errori globali (ad esempio account scaduto): non riprovare sullo stesso portale.
+        if(/sessione|login|403|autorizz/i.test(String(err.message||err))){
+          for(const rest of targets.slice(i+groupSize)){rest.quoteState='unavailable';rest.quoteReason='Accesso preventivi non disponibile.';}
+          break;
+        }
+      }
+    }
+    if(generation===quoteGeneration){
+      state.quoteLoading=false;
+      renderResults();
+    }
   }
   async function saveRequest(e){
     e.preventDefault();const clubs=selected('jobClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
@@ -292,10 +346,9 @@
     $('schedulerBtn').addEventListener('click',()=>{$('schedulerDialog').showModal();schedulerState();});
     $('enableScheduler').addEventListener('click',()=>scheduler(true));$('disableScheduler').addEventListener('click',()=>scheduler(false));
     $('refreshBtn').addEventListener('click',loadAll);
-    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-edit-court],[data-quote-court],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
+    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-edit-court],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
       if(t.dataset.editClub)editClub(t.dataset.editClub);
       if(t.dataset.editCourt)openCourtDetails(t.dataset.courtClub,t.dataset.editCourt);
-      if(t.dataset.quoteCourt)quoteCourt(t.dataset.quoteCourt,t.dataset.quoteStart,t);
       if(t.dataset.detail)detail(t.dataset.detail);
       if(t.dataset.cancel)cancel(t.dataset.cancel);
       if(t.dataset.probe)probe(t.dataset.probe);
