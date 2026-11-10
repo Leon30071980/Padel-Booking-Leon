@@ -4,14 +4,6 @@
  * Supporto 60 minuti iniziale: "duration=" lasciato vuoto, come osservato dall'utente.
  * Il prezzo è legato a sessione, profilo/listino, campo, data e orario.
  */
-function pblTslotId_(slot){
-  if(!slot || typeof slot!=='object')return '';
-  for(const key of ['tslotId','tslot_id','idTslot','ts_id','id']){
-    const raw=slot[key];
-    if(/^[1-9]\d{0,11}$/.test(String(raw??'')))return String(raw);
-  }
-  return '';
-}
 function pblQuoteNumber_(v){
   if(typeof v==='number')return Number.isFinite(v)&&v>=0&&v<=5000?v:NaN;
   const raw=String(v??'').replace(/[€\s]/g,'').trim();
