@@ -1,4 +1,4 @@
-/* v1.13 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
+/* v1.14 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
@@ -10,10 +10,10 @@
   const msg=event.data;
   if(!msg||msg.channel!==CHANNEL)return;
   if(msg.kind==='ready'){ready=true;document.dispatchEvent(new Event('pbl-chrome-ready'));return;}
-  if(msg.kind!=='result'||!Number.isSafeInteger(msg.id))return;
+  if(!['result','handoff-result'].includes(msg.kind)||!Number.isSafeInteger(msg.id))return;
   const p=pending.get(msg.id);if(!p)return;
   pending.delete(msg.id);clearTimeout(p.timer);
-  if(msg.ok===true)p.resolve(msg.data);
+  if(msg.ok===true)p.resolve(msg.kind==='handoff-result'?{ok:true}:msg.data);
   else p.reject(Error(typeof msg.error==='string'?msg.error:'Impossibile leggere Playtomic.'));
  });
  function installed(){return ready;}
@@ -36,7 +36,16 @@
    send('query',{id,query:{date:q.date,time:q.time,duration:Number(q.duration),tolerance:Number(q.tolerance)}});
   });
  }
- window.PBL_CHROME={installed,probe,query};
+ async function handoff(details){
+  if(!ready && !(await probe()))throw Error('Estensione Chrome non rilevata: ricarichi l’estensione aggiornata.');
+  const id=++serial;
+  return new Promise((resolve,reject)=>{
+   const timer=setTimeout(()=>{pending.delete(id);reject(Error('L’estensione non ha aperto Wansport entro 15 secondi.'));},15000);
+   pending.set(id,{resolve,reject,timer});
+   send('handoff',{id,payload:details});
+  });
+ }
+ window.PBL_CHROME={installed,probe,query,handoff};
  send('ping');
  document.addEventListener('DOMContentLoaded',()=>send('ping'));
 })();
