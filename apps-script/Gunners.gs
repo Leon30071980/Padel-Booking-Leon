@@ -148,6 +148,15 @@ function gunnersMinutes_(text){
   const h=Number(m[1]),n=Number(m[2]);
   return h>=0&&h<=24&&n<60&&(h<24||n===0)?h*60+n:NaN;
 }
+function pblTslotId_(slot){
+  if(!slot || typeof slot!=='object')return '';
+  for(const key of ['tslotId','tslot_id','idTslot','ts_id','id']){
+    const raw=slot[key];
+    if(/^[1-9]\d{0,11}$/.test(String(raw??'')))return String(raw);
+  }
+  return '';
+}
+
 function gunnersSlots_(data,day,preferred,duration,tolerance){
   const target=gunnersMinutes_(preferred);
   const result=[];
@@ -176,9 +185,13 @@ function gunnersSlots_(data,day,preferred,duration,tolerance){
         const namedCover=/\b(?:coperto|indoor)\b/i.test(courtName)?'indoor':
           /\b(?:scoperto|open|outdoor)\b/i.test(courtName)?'outdoor':'unknown';
         const cover=explicitCover!=='unknown'?explicitCover:namedCover;
+        // L'ID della fascia iniziale è necessario per aprire il preventivo
+        // Wansport. Non confonderlo con l'ID del campo.
+        const firstPart=byStart.get(start);
+        const tslotId=pblTslotId_(firstPart);
         result.push({court_id:String(resource.id),court:courtName,start:hm(start),end:hm(start+duration),
           duration,club_id:'gunners',date:day,venue:String(sede.nome||'').slice(0,90),
-          cover,cover_source:explicitCover!=='unknown'?'calendario':namedCover!=='unknown'?'nome campo':'unknown',price:''});
+          tslot_id:tslotId||'',cover,cover_source:explicitCover!=='unknown'?'calendario':namedCover!=='unknown'?'nome campo':'unknown',price:''});
       }
     }
   }
