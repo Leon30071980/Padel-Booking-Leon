@@ -34,7 +34,7 @@ assert.match(read('apps-script/WansportExtra.gs'),/vigatto/i);
 assert.match(read('github-pages/index.html'),/id="courtDialog"/);
 assert.match(read('apps-script/Bridge.html'),/getCourtDetails/);
 assert.match(read('apps-script/Bridge.html'),/getWansportQuote/);
-assert.match(read('github-pages/app.js'),/quoteCourt\(/);
+assert.match(read('github-pages/app.js'),/loadAutomaticQuotes\(/);
 assert.match(read('apps-script/WansportQuotes.gs'),/getPrenotazioneNuovaModal/);
 assert.match(read('apps-script/Bridge.html'),/getWansportQuotesBatch/);
 assert.match(read('github-pages/app.js'),/loadAutomaticQuotes/);
