@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.8 — Playtomic / Padel Hero Parma — SOLA LETTURA.
+ * Padel Booking Leon v1.9 — Playtomic / Padel Hero Parma — SOLA LETTURA.
  * Endpoint e campi osservati dal proprietario in Chrome il 10/11/2026.
  * API web non ufficialmente garantita: mai usare credenziali, token o POST.
  */
@@ -58,7 +58,7 @@ function playtomicSlots_(data,day,preferred,duration,tolerance){
       const name=resource.resource_name||resource.name||'Campo '+resource.resource_id.slice(0,8);
       result.push({club_id:'hero',court_id:resource.resource_id,court:String(name).slice(0,90),
         start:playtomicClock_(start),end:playtomicClock_(start+duration),
-        duration,date:day,price:slot.price==null?'':String(slot.price).slice(0,60)});
+        duration,date:day,location:'San Prospero',cover:'unknown',price:slot.price==null?'':String(slot.price).slice(0,60)});
     }
   }
   return result.sort((a,b)=>Math.abs(playtomicTime_(a.start)-target)-Math.abs(playtomicTime_(b.start)-target)||
