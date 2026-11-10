@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.4 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.5 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G da validare.
  */
-const PBL_VERSION = 'v1.4';
+const PBL_VERSION = 'v1.5';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -18,7 +18,21 @@ const PBL_HEADERS = Object.freeze({
   Events:['stamp','request_id','club_id','message']
 });
 
-function doGet(){
+function doGet(e){
+  // Il ponte comunica SOLO con GitHub Pages e NON espone endpoint pubblici.
+  // La Web App deve restare privata (solo il proprietario).
+  if (e && e.parameter && e.parameter.bridge === '1') {
+    const nonce = String(e.parameter.nonce || '');
+    if (!/^[a-f0-9]{32}$/.test(nonce)) {
+      return HtmlService.createHtmlOutput('Parametri ponte non validi.');
+    }
+    const t = HtmlService.createTemplateFromFile('Bridge');
+    t.nonceJson = JSON.stringify(nonce);
+    // Il documento ponte non contiene pulsanti: protegge il canale con
+    // controlli di origine, nonce e lista esplicita delle funzioni ammesse.
+    return t.evaluate().setTitle('Padel Booking Leon — Google Bridge')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
   const t = HtmlService.createTemplateFromFile('Index');
   t.version = PBL_VERSION;
   return t.evaluate().setTitle('Padel Booking Leon — ' + PBL_VERSION)
@@ -243,7 +257,7 @@ function searchClubAvailability_(id,request){
     reason:'Playtomic non collegato. Aprire il portale per verificare la disponibilità.'};
 }
 /**
- * v1.4: controllo una tantum ALL'APERTURA TEORICA, non monitoraggio continuo.
+ * v1.5: controllo una tantum ALL'APERTURA TEORICA, non monitoraggio continuo.
  * Trigger a minuto non preciso; nessun addebito o prenotazione.
  * Esegue al massimo 3 ricerche live per tick per rispettare limiti Apps Script.
  */

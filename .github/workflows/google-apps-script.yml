@@ -52,41 +52,16 @@ jobs:
           JSON.parse(fs.readFileSync(process.env.HOME+'/.clasprc.json','utf8'));
           fs.writeFileSync('.clasp.json',JSON.stringify({scriptId:id,rootDir:'apps-script'}));
           NODE
-      - name: Check existing Apps Script file inventory
-        # A read-only pull into a temporary folder lets us spot files that
-        # clasp push --force would otherwise remove from the Google project.
+      - name: Require verified Web App deployment
+        env:
+          WEBAPP_VERIFIED: ${{ vars.APPS_SCRIPT_WEBAPP_VERIFIED }}
         run: |
-          REMOTE_DIR="$(mktemp -d)"
-          export REMOTE_DIR
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const project = JSON.parse(fs.readFileSync('.clasp.json', 'utf8'));
-          const config = {scriptId: project.scriptId, rootDir: 'apps-script'};
-          fs.mkdirSync(path.join(process.env.REMOTE_DIR, 'apps-script'), {recursive: true});
-          fs.writeFileSync(path.join(process.env.REMOTE_DIR, '.clasp.json'), JSON.stringify(config));
-          NODE
-          (cd "$REMOTE_DIR" && npx --yes @google/clasp@3.4.1 pull)
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const filenames = dir => fs.readdirSync(dir, {withFileTypes: true})
-            .filter(entry => entry.isFile() && /\.(gs|html|json)$/i.test(entry.name))
-            .map(entry => entry.name);
-          const remote = filenames(path.join(process.env.REMOTE_DIR, 'apps-script'));
-          const local = new Set(filenames('apps-script'));
-          if (!remote.length) {
-            console.error('Remote inventory empty; refusing to overwrite the Google project.');
-            process.exit(1);
-          }
-          const extras = remote.filter(name => !local.has(name));
-          if (extras.length) {
-            console.error('Extra files on Google Apps Script, absent from GitHub: ' + extras.join(', '));
-            console.error('Stop: import/reconcile those files before deploying.');
-            process.exit(1);
-          }
-          console.log('Preflight OK: ' + remote.length + ' remote files are covered by GitHub.');
-          NODE
+          if [ "$WEBAPP_VERIFIED" != "true" ]; then
+            echo 'Bloccato: il deployment precedente era una libreria.'
+            echo 'Creare prima un deployment App web privato e aggiornare APPS_SCRIPT_DEPLOYMENT_ID.'
+            echo 'Poi impostare APPS_SCRIPT_WEBAPP_VERIFIED=true nelle variabili GitHub Actions.'
+            exit 1
+          fi
       - name: Push versioned code to existing script
         run: npx --yes @google/clasp@3.4.1 push --force
       - name: Update existing web app deployment
@@ -94,5 +69,5 @@ jobs:
           DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
         run: |
           # Updating an existing deployment preserves its web app URL and access settings.
-          npx --yes @google/clasp@3.4.1 update-deployment "$DEPLOYMENT_ID" --description 'Padel Booking Leon v1.4' >/dev/null
-          echo 'Web app deployment updated to v1.4.'
+          npx --yes @google/clasp@3.4.1 update-deployment "$DEPLOYMENT_ID" --description 'Padel Booking Leon v1.5' >/dev/null
+          echo 'Web app deployment updated to v1.5.'

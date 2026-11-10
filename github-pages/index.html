@@ -1,13 +1,115 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1312"><title>Padel Booking Leon v1.4</title><link rel="icon" href="favicon.svg" type="image/svg+xml">
-<style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 55% 18%,#244932,#0b1312 65%);color:#eef9f0;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}main{width:min(560px,100%);background:#14221d;border:1px solid #385142;padding:35px;border-radius:22px;box-shadow:0 25px 80px #0005}.eyebrow{font-size:11px;color:#b0f5a1;letter-spacing:.17em;font-weight:800}.brand{font-weight:800;letter-spacing:-.03em;font-size:30px;margin:12px 0 6px}.brand b{color:#b0f5a1}p{color:#9bb8a6;line-height:1.65;font-size:14px}.pill{display:inline-block;font-size:12px;color:#d1e9d2;border:1px solid #54725b;border-radius:999px;padding:5px 11px;margin-top:15px}label{display:block;font-size:13px;margin:22px 0 8px;color:#d4e3d6}input{display:block;width:100%;padding:13px 14px;border-radius:10px;border:1px solid #4b6755;background:#0b1711;color:white;font:inherit}button,a.launch{display:block;width:100%;padding:14px;text-align:center;border:0;border-radius:10px;background:#b1f19f;color:#132118;font:700 14px system-ui;cursor:pointer;margin-top:12px;text-decoration:none}a.launch{background:#2a4231;color:#daffe0;border:1px solid #526f5b}small{display:block;color:#8ba698;margin-top:22px;line-height:1.5}#message{min-height:18px;color:#e4c78f;font-size:12px;margin-top:10px}
-</style></head><body><main><div class="eyebrow">GOOGLE CLOUD EDITION · v1.4</div><h1 class="brand">PADEL <b>BOOKING</b> LEON</h1><p>Gestione delle richieste e delle regole dei quattro centri da browser, con archivio sul tuo Google Drive. Tre connettori Wansport predisposti per la ricerca in sola lettura. La prenotazione automatica non è attiva.</p><span class="pill">Nessun software da installare</span><label for="url">Indirizzo della web app Google Apps Script</label><input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="url"><button id="save" type="button">Salva indirizzo su questo dispositivo</button><a class="launch" id="launch" href="https://script.google.com/home" target="_blank" rel="noopener noreferrer">Apri applicazione Google</a><div id="message" role="status"></div><small>Questo collegamento è salvato soltanto nel browser e non in GitHub. Per ragioni di sicurezza, l'app di gestione risiede su Google Apps Script con accesso limitato al proprietario.</small></main>
-<script>
-(()=>{'use strict';const input=document.getElementById('url'),launch=document.getElementById('launch'),message=document.getElementById('message');
-function valid(v){try{const u=new URL(v);return u.protocol==='https:'&&u.hostname==='script.google.com'&&/^\/macros\/s\/[^/]+\/exec$/.test(u.pathname);}catch{return false;}}
-function link(v){if(valid(v)){launch.href=v;launch.textContent='Apri Padel Booking Leon';return true;}launch.href='https://script.google.com/home';launch.textContent='Apri Google Apps Script';return false;}
-const old=localStorage.getItem('pblAppUrl')||'';input.value=old;link(old);
-document.getElementById('save').addEventListener('click',()=>{const v=input.value.trim();if(!valid(v)){message.textContent='Inserire un URL di deployment Google Apps Script valido, terminante con /exec.';return;}localStorage.setItem('pblAppUrl',v);link(v);message.textContent='Indirizzo salvato in questo browser.';});
-})();
-</script></body></html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0a1413">
+  <meta name="description" content="Padel Booking Leon: pianifica la ricerca dei campi da padel su più centri sportivi.">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>Padel Booking Leon — v1.5</title>
+</head>
+<body>
+  <div class="background-glow" aria-hidden="true"></div>
+
+  <section class="github-connect" aria-label="Collegamento Google" id="backendPanel">
+    <div class="github-connect__head"><div><strong><span aria-hidden="true">🔐</span> Backend Google privato</strong>
+    <p>La grafica è su GitHub. I dati restano su Google Drive, accessibili soltanto con il Suo account.</p></div>
+    <span id="bridgeStatus" role="status" aria-live="polite">Non collegato</span></div>
+    <form id="bridgeForm" class="github-connect__form">
+      <label for="bridgeUrl">URL dell'app web Google (termina con /exec)</label>
+      <div class="github-connect__controls">
+        <input id="bridgeUrl" type="url" autocomplete="url" spellcheck="false" placeholder="https://script.google.com/macros/s/.../exec" required>
+        <button type="submit" class="btn btn-accent" id="bridgeConnectBtn">Collega</button>
+        <a id="bridgeOpenGoogle" class="btn btn-outline" target="_blank" rel="noopener noreferrer" href="https://script.google.com/home">Apri Google</a>
+      </div>
+      <small id="bridgeNote">Il collegamento viene salvato solo in questo browser. Non inserisca qui ID di libreria o password.</small>
+    </form>
+  </section>
+
+  <div class="app-shell">
+    <header class="header">
+      <a class="brand" href="#top" aria-label="Padel Booking Leon">
+        <span class="brand-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5c-9 0-15 6-15 16 0 9 6 15 15 15s15-6 15-15C39 11 33 5 24 5Z" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M20 36v9h8v-9M16 11l16 20M10 21l22-10M14 30l20-19M16 11l22 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="brand-type"><strong>PADEL <span>BOOKING</span> LEON</strong><small>CLOUD EDITION <b>· v1.5</b></small></span>
+      </a>
+      <div class="header-actions"><span class="connection" id="connection"><i></i> Controllo connessione…</span><button type="button" class="btn btn-ghost" id="schedulerBtn">⚙ <span>Cloud</span></button></div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy"><div class="eyebrow"><span class="pulse-dot"></span> IL TUO ASSISTENTE PADEL</div>
+          <h1>Il campo giusto.<br><em>Al momento giusto.</em></h1>
+          <p>Gestisca centri e regole di apertura con i dati salvati sul Suo Google Drive. Legga i calendari Wansport collegati e programmi un controllo alla loro apertura. Nessuna prenotazione automatica.</p>
+          <div class="hero-actions"><a class="btn btn-accent" href="#ricerca">Cerca disponibilità <span>↗</span></a><a class="btn btn-outline" href="#programmazione">Programma ricerca</a></div>
+        </div>
+        <div class="hero-visual" aria-hidden="true"><div class="court"><div class="court-inner"><span class="net"></span><span class="service-a"></span><span class="service-b"></span></div><span class="ball"></span></div><div class="visual-label"><span class="visual-mini-dot"></span> GOOGLE CLOUD EDITION</div></div>
+      </section>
+
+      <section class="summary" aria-label="Riepilogo"><div class="metric"><span>Centri configurati</span><strong id="metricClubs">4</strong><small>Wansport + Playtomic</small></div><div class="metric"><span>Connettori pronti</span><strong id="metricReady">0<span class="metric-suffix"> / 4</span></strong><small>Da verificare per singolo sito</small></div><div class="metric"><span>Richieste registrate</span><strong id="metricJobs">0</strong><small>Richieste attive</small></div><div class="metric metric-time"><span>Orologio prenotazioni</span><strong id="romeClock">--:--:--</strong><small>Europe/Rome</small></div></section>
+
+      <section class="two-col" id="ricerca">
+        <article class="panel search-panel"><div class="section-head"><div><div class="overline">01 / CONTROLLO LIVE</div><h2>Cerca un campo</h2><p>Ricerca reale di sola lettura sui portali Wansport collegati. Playtomic non è ancora integrato.</p></div><div class="circle-icon">⌕</div></div>
+          <form id="searchForm" class="form-grid">
+            <label class="field">Data partita<input id="searchDate" type="date" required></label>
+            <label class="field">Ora preferita<input id="searchTime" type="time" value="20:00" required></label>
+            <label class="field">Durata<select id="searchDuration"><option value="60">60 minuti</option><option selected value="90">90 minuti</option><option value="120">120 minuti</option></select></label>
+            <label class="field">Tolleranza<select id="searchTolerance"><option value="0">Esatta</option><option value="15">± 15 minuti</option><option selected value="30">± 30 minuti</option><option value="60">± 60 minuti</option></select></label>
+            <div class="field full"><label>Centri da controllare</label><div class="club-choices" id="searchClubChoices"></div></div>
+            <button class="btn btn-accent full" type="submit" id="searchBtn">⌕ &nbsp; Verifica disponibilità</button>
+          </form>
+          <div id="searchResults" class="search-results" aria-live="polite"><div class="empty-inline">Selezioni data e orario per iniziare la ricerca. I centri non collegati verranno indicati come tali.</div></div>
+        </article>
+        <article class="panel schedule-panel" id="programmazione"><div class="section-head"><div><div class="overline">02 / AUTOMAZIONE</div><h2>Programma un controllo</h2><p>Registra su Drive un controllo di sola lettura all’apertura teorica. Non viene prenotato alcun campo.</p></div><div class="circle-icon">◷</div></div>
+          <form id="jobForm" class="form-grid">
+            <label class="field">Data partita<input id="jobDate" type="date" required></label>
+            <label class="field">Ora preferita<input id="jobTime" type="time" value="20:00" required></label>
+            <label class="field">Durata<select id="jobDuration"><option value="60">60 minuti</option><option selected value="90">90 minuti</option><option value="120">120 minuti</option></select></label>
+            <label class="field">Tolleranza<select id="jobTolerance"><option value="0">Esatta</option><option value="15">± 15 minuti</option><option selected value="30">± 30 minuti</option><option value="60">± 60 minuti</option></select></label>
+            <div class="field full"><label>Centri in ordine di priorità</label><div id="jobClubChoices" class="club-choices"></div></div>
+            <div class="field full"><label>Obiettivo</label><div class="mode-switch" role="radiogroup" aria-label="Modalità di controllo"><label><input type="radio" name="jobMode" value="notify" checked><span>◉ &nbsp;Controllo all’apertura</span></label><label><input type="radio" name="jobMode" value="auto"><span>⚡ &nbsp;Prenotazione futura*</span></label></div></div>
+            <div id="openingPreview" class="opening-preview full">Le finestre di prenotazione saranno calcolate dalle regole dei club.</div>
+            <div id="autoWarning" class="warning full hidden">La modalità automatica è soltanto un obiettivo futuro: in v1.5 nessuna prenotazione né pagamento vengono eseguiti. Il trigger effettua un controllo in sola lettura.</div>
+            <button type="submit" class="btn btn-light full" id="scheduleBtn">＋ &nbsp;Salva richiesta</button>
+          </form>
+        </article>
+      </section>
+
+      <section id="centri" class="section-block"><div class="section-title"><div><div class="overline">03 / CENTRI SPORTIVI</div><h2>I tuoi centri</h2><p>Gestisca per ogni centro le regole effettive di apertura delle prenotazioni.</p></div><span class="subtle-hint">Le impostazioni sono indipendenti</span></div><div class="club-grid" id="clubGrid"><div class="empty-inline">Caricamento centri…</div></div></section>
+
+      <section class="section-block" id="attivita"><div class="section-title"><div><div class="overline">04 / ATTIVITÀ</div><h2>Richieste registrate</h2><p>Stato delle richieste salvate in Google Sheets. Il trigger, se attivato, verifica il calendario una volta all’apertura teorica e registra l’esito. Non prenota.</p></div><button class="btn btn-outline btn-small" id="refreshBtn" type="button">↻ &nbsp;Aggiorna</button></div><div class="panel jobs-panel" id="jobsPanel"><div class="empty-state"><strong>Nessuna ricerca programmata</strong><p>Quando aggiungerà una richiesta, comparirà qui.</p></div></div></section>
+      <footer><span>PADEL BOOKING LEON <b>v1.5</b> · GOOGLE DRIVE</span><span>Non affiliato a Wansport o Playtomic · Tre connettori Wansport in sola lettura (Pro/Punto G da validare)</span></footer>
+    </main>
+  </div>
+
+  <dialog class="modal" id="clubDialog"><form method="dialog" id="clubForm"><div class="modal-heading"><div><div class="overline">CONFIGURAZIONE CLUB</div><h2 id="clubDialogTitle">Regola prenotazioni</h2></div><button type="button" class="icon-button" data-close="clubDialog">×</button></div>
+    <input type="hidden" id="editClubId"><label class="field">Tipo di apertura<select id="editRule"><option value="unknown">Da verificare</option><option value="calendar_days">N giorni di calendario prima</option><option value="rolling_hours">N ore prima della partita</option></select></label>
+    <div class="form-grid"><label class="field">Anticipo massimo<input type="number" id="editAdvance" min="1" max="1440" placeholder="Es. 7"></label><label class="field" id="releaseWrap">Orario di apertura<input type="time" id="editRelease" value="00:01"></label><label class="field">Priorità (1 = più alta)<input type="number" id="editPriority" min="1" max="50"></label><label class="field checkbox-field"><input type="checkbox" id="editEnabled" checked> Centro incluso nelle ricerche</label></div>
+    <p class="modal-note">Imposti soltanto regole verificate sul portale. La regola determina quando il motore prova a cercare: non abilita da sola il connettore.</p>
+    <div class="modal-actions"><button type="button" class="btn btn-outline" data-close="clubDialog">Annulla</button><button type="submit" class="btn btn-accent">Salva regola</button></div></form></dialog>
+
+  <dialog class="modal" id="schedulerDialog"><div class="modal-heading"><div><div class="overline">GOOGLE CLOUD</div><h2>Motore programmato</h2></div><button type="button" class="icon-button" data-close="schedulerDialog">×</button></div>
+    <p class="modal-note">I dati sono salvati in un Google Sheets privato sul Suo Drive. Un trigger Apps Script prova a leggere il calendario Wansport una sola volta all’apertura teorica; l’esito compare nel dettaglio della richiesta. Il trigger non garantisce il minuto esatto. Nessuna prenotazione o pagamento viene effettuato. Non sono previste notifiche push in questa versione.</p>
+    <p id="schedulerStatus" class="opening-preview">Caricamento stato…</p>
+    <div class="modal-actions"><button type="button" class="btn btn-outline" id="disableScheduler">Disattiva</button><button type="button" class="btn btn-accent" id="enableScheduler">Attiva trigger</button></div>
+  </dialog>
+
+  <dialog class="modal" id="wansportDialog">
+    <div class="modal-heading"><div><div class="overline">CONNETTORE DI SOLA LETTURA</div><h2 id="wansportDialogTitle">Connettore Wansport</h2></div><button type="button" class="icon-button" data-close="wansportDialog">×</button></div>
+    <p class="modal-note">Inserisca qui le credenziali soltanto nella Sua Web App privata di Google. Verranno conservate nelle <strong>Proprietà utente dello script</strong> (non nel foglio Drive, non in GitHub). Non sono crittografate con una chiave separata e sono accessibili a chi può modificare il progetto Apps Script.</p>
+    <form id="wansportForm" autocomplete="off"><input type="hidden" id="wansportClubId">
+      <label class="field">Email o cellulare<input id="wansportUsername" type="text" autocomplete="username" required maxlength="200"></label>
+      <label class="field">Password<input id="wansportPassword" type="password" autocomplete="new-password" required maxlength="256"></label>
+      <label class="field" id="wansportSportWrap">ID sport Wansport (predefinito 15 per Padel)<input type="number" id="wansportSportId" min="1" max="99999" value="15" required></label>
+      <div class="modal-actions"><button type="button" id="wansportDelete" class="btn btn-outline">Rimuovi accesso</button><button type="submit" id="wansportSave" class="btn btn-accent">Salva e verifica</button></div>
+    </form>
+    <div id="wansportMessage" class="opening-preview">Il test interrogherà il calendario di oggi senza prenotare.</div>
+    <p class="modal-note">Il collegamento può essere rifiutato da Wansport se sono richiesti passaggi interattivi o se il portale non consente login dal cloud. Nessun aggiramento di CAPTCHA o altri controlli. L’ID sport di Pro e Punto G potrebbe essere diverso da quello di Gunners; in tal caso va letto nella richiesta del loro calendario.</p>
+  </dialog>
+
+  <dialog class="modal detail-modal" id="detailDialog"><div class="modal-heading"><div><div class="overline">DETTAGLIO RICHIESTA</div><h2 id="detailTitle">Attività</h2></div><button type="button" class="icon-button" data-close="detailDialog">×</button></div><div id="detailBody"></div><div class="modal-actions"><button type="button" class="btn btn-outline" data-close="detailDialog">Chiudi</button></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script defer src="bridge.js"></script>
+  <script defer src="app.js"></script>
+</body></html>

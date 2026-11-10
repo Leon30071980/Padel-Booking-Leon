@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><title>Padel Booking Leon · Collegamento Google</title></head>
+<body>
+<p>Collegamento privato Padel Booking Leon. Non contiene interfacce di accesso.</p>
+<script>
+(function(){
+  'use strict';
+  const ORIGIN = 'https://leon30071980.github.io';
+  const CHANNEL = 'pbl-google-bridge-v1';
+  const NONCE = <?!= nonceJson ?>;
+  const allowed = new Set([
+    'getDashboard','getOpeningPreview','searchAvailability','createRequest',
+    'saveClubRule','getRequestDetail','cancelRequest','checkPublicPortal',
+    'installScheduler','removeScheduler','saveWansportCredentials',
+    'testWansportConnection','deleteWansportCredentials'
+  ]);
+  function send(kind,body){
+    window.top.postMessage(Object.assign({channel:CHANNEL,nonce:NONCE,kind:kind},body||{}),ORIGIN);
+  }
+  window.addEventListener('message',function(event){
+    if(event.origin!==ORIGIN||event.source!==window.top)return;
+    const msg=event.data;
+    if(!msg||msg.channel!==CHANNEL||msg.nonce!==NONCE||msg.kind!=='call')return;
+    if(!Number.isSafeInteger(msg.id)||msg.id<1)return;
+    if(typeof msg.action!=='string'||!allowed.has(msg.action)){
+      send('result',{id:msg.id,ok:false,error:'Operazione non autorizzata.'});return;
+    }
+    if(!Array.isArray(msg.args)||msg.args.length>5){
+      send('result',{id:msg.id,ok:false,error:'Parametri non validi.'});return;
+    }
+    try{
+      // Qui google.script.run è disponibile perché siamo nella Web App privata.
+      const runner=google.script.run
+        .withSuccessHandler(function(data){send('result',{id:msg.id,ok:true,data:data});})
+        .withFailureHandler(function(error){
+          send('result',{id:msg.id,ok:false,error:String(error&&error.message||'Errore Google Apps Script').slice(0,600)});
+        });
+      runner[msg.action].apply(runner,msg.args);
+    }catch(error){send('result',{id:msg.id,ok:false,error:String(error&&error.message||error).slice(0,600)});}
+  });
+  send('ready',{version:'v1.5'});
+})();
+</script>
+</body>
+</html>

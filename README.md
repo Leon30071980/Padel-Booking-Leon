@@ -1,63 +1,47 @@
-# Padel Booking Leon — v1.4
+# Padel Booking Leon — v1.5
 
-**Versione con sorgenti su GitHub, esecuzione su Google Apps Script e archivio Google Sheets/Drive.**
+**Frontend completo su GitHub Pages; backend privato su Google Apps Script e archivio su Google Sheets.**
 
-La v1.4 è una migrazione di sviluppo/deployment: mantiene tutta la logica di sola lettura della v1.3 (Gunners, connettori sperimentali Pro e Punto G, scheduler e interfaccia). **Non effettua prenotazioni, ricariche o pagamenti.** Padel Hero Playtomic non è ancora integrato. Il connettore Gunners risultava funzionante nel precedente test riferito dall'utente; Pro e Punto G sono ancora da verificare.
+## Stato del rilascio
 
-## Architettura
+Il frontend su GitHub include l'interfaccia completa della v1.4 (con la grafica e i moduli originali). **Il collegamento live richiede una Web App Google Apps Script**: il deployment precedentemente configurato era di tipo *libreria*, perciò il suo URL non può funzionare con `/exec`. La v1.5 non afferma di avere un collegamento live finché il browser non lo conferma. GitHub Pages è pubblico; il backend resta privato e non si trasferiscono password, cookie o token nel repository.
 
-- **GitHub**: fonte del codice `apps-script/`, test, workflow CI e GitHub Pages.
-- **Google Apps Script**: esegue HTMLService, accessi Wansport e controlli automatici a PC spento; resta lo stesso progetto Google della v1.3.
-- **Google Sheets/Drive**: configurazioni, richieste e cronologia già presenti. I dati non vengono migrati o cancellati.
-- **GitHub Pages**: pagina pubblica di avvio che non espone password; l'URL dell'app Google viene salvato nel browser dell'utente, non nel repository.
+Nessuna prenotazione o pagamento automatico viene effettuato. Gunners è stato verificato dall'utente nelle versioni precedenti; Pro Padel e Punto G restano sperimentali. Padel Hero (Playtomic) non è integrato.
 
-## Stato della migrazione
+## Avvio dell'interfaccia su GitHub
 
-**I file su GitHub non aggiornano automaticamente la web app Google finché non si configurano le credenziali e non si esegue il primo deployment.** La v1.3 in Google continua a funzionare. Il progetto Google è privato; non rendere pubblica la web app. La v1.4 è disponibile come sorgente; diventa versione operativa dopo la pubblicazione con successo.
+URL: https://leon30071980.github.io/Padel-Booking-Leon/
 
-## Prima attivazione (una sola volta)
+La pagina GitHub è una web app completa: HTML, CSS, JS in `github-pages/`; il file `index.html` alla radice facilita le configurazioni Pages basate su `main` e cartella `/`.
 
-1. Accedere a [Apps Script](https://script.google.com/home) e aprire il **progetto già esistente**. Non creare un nuovo script e non eseguire nuovamente `setupApp`.
-2. In **Impostazioni progetto**, copiare l'**ID script** (non l'ID spreadsheet e non l'URL `/exec`).
-3. In **Esegui deployment → Gestisci deployment**, aprire il deployment web già in uso e copiarne l'**ID deployment**. Deve essere quello esistente, per conservare lo stesso URL `/exec`.
-4. In [Impostazioni Apps Script API](https://script.google.com/home/usersettings), abilitare **API di Google Apps Script**.
-5. Eseguire una sola volta `clasp login` **in un terminale controllato dall'utente** e recuperare `~/.clasprc.json` (OAuth del Suo account). Si può usare un ambiente cloud nel browser (ad es. GitHub Codespaces, se disponibile) per evitare installazioni permanenti, ma è necessario completare l'autorizzazione Google; non incollare il file in chat. Guida ufficiale: https://developers.google.com/apps-script/guides/clasp
-6. Nel repository GitHub: **Settings → Secrets and variables → Actions → Secrets**, creare:
-   - `APPS_SCRIPT_ID`: ID script del punto 2;
-   - `APPS_SCRIPT_DEPLOYMENT_ID`: ID deployment del punto 3;
-   - `CLASPRC_JSON`: **intero contenuto** del file `~/.clasprc.json`, custodito in segreto.
-7. In **Settings → Environments**, creare l'ambiente `google-production`. Se disponibile, abilitare l'approvazione dei deployment e limitare il branch a `main`. Senza queste opzioni il workflow funziona comunque, ma ha minori protezioni.
-8. Aprire **Actions → Publish Google Apps Script → Run workflow** (branch `main`). Il workflow esegue test, trasferisce i file con clasp e **aggiorna il deployment esistente**. La prima esecuzione va lanciata solo dopo aver verificato che i file della v1.3 presenti nel progetto Google corrispondano a quelli ora in GitHub; `clasp push --force` sostituisce i file del progetto remoto e può eliminare file aggiuntivi non presenti nel repository.
-9. Verificare sull'URL web esistente `/exec` che la versione sia **v1.4** e che Gunners, configurazioni e cronologia siano ancora presenti.
-10. **Solo dopo aver verificato il primo rilascio**, abilitare gli aggiornamenti automatici creando in **Settings → Secrets and variables → Actions → Variables** `AUTO_DEPLOY_ENABLED` con valore `true`. A quel punto ogni push su `main` che modifica il codice o il workflow avvia il deployment Google (salvo l'approvazione eventualmente richiesta dall'ambiente).
+## Creare il backend Web App corretto (una volta)
 
-**NOTA IMPORTANTE:** `CLASPRC_JSON` contiene un refresh token OAuth con permessi sul Suo account Apps Script. Non è una password Wansport; non deve essere incluso nei sorgenti o condiviso. In un repository pubblico, il workflow `main` dovrebbe essere modificabile soltanto da persone fidate. Si consiglia la protezione del branch e di non eseguire workflow di pull request non fidate con accesso ai secret.
+1. Aprire **il progetto esistente** su https://script.google.com/home (non creare un nuovo progetto e non rieseguire `setupApp`).
+2. Il codice della v1.5 deve essere presente nel progetto, incluso `Bridge.html`. Configurare `APPS_SCRIPT_WEBAPP_VERIFIED=true` su GitHub **soltanto dopo** aver creato e verificato il deployment Web App, oppure eseguire un `clasp push` controllato da Codespaces prima della prima creazione dell'App web.
+3. In **Esegui deployment → Nuovo deployment → Seleziona tipo → App web** (non Libreria), usare **Esegui come me** e **Chi ha accesso: Solo io**. Concludere il deployment e copiare il link `/exec` fornito da Google.
+4. Aprire l'URL `/exec` in una scheda del browser per completare l'accesso Google e verificare che funzioni. Se il browser blocca i cookie di terze parti o l'iframe, il collegamento dentro GitHub Pages potrebbe non riuscire. In tal caso utilizzare direttamente l'App web privata Google; non impostare l'accesso pubblico come scorciatoia.
+5. Aprire il sito GitHub Pages, incollare l'URL `/exec` nel riquadro **Backend Google privato**, premere **Collega**. L'indirizzo viene conservato in `localStorage` sul proprio dispositivo, mai nel repository.
+6. Sostituire nel repository secret `APPS_SCRIPT_DEPLOYMENT_ID` con il **nuovo ID di distribuzione della App web** e impostare la variabile `APPS_SCRIPT_WEBAPP_VERIFIED=true` in Settings → Secrets and variables → Actions → Variables. Tenere `AUTO_DEPLOY_ENABLED` disattivato fino al collaudo.
+7. In Actions → Publish Google Apps Script → Run workflow, pubblicare la v1.5 sul deployment Web App corretto. Quindi riprovare il collegamento dal sito GitHub.
 
-## Prove locali e CI
+**Ordine consigliato**: aggiornare in via manuale il codice Apps Script prima della creazione dell'App web e usare il workflow automatizzato soltanto dopo avere un deployment Web App verificato. Il workflow ora rifiuta di pubblicare finché `APPS_SCRIPT_WEBAPP_VERIFIED` non sia impostata a `true` per evitare che venga aggiornata nuovamente una libreria.
 
-```bash
-npm test
-```
+## Sicurezza del ponte
 
-I test non richiedono credenziali e non contattano Wansport. La CI `Check Padel Booking Leon` viene eseguita ad ogni push/PR; il workflow Google **non** opera sul progetto reale finché non viene abilitato manualmente. `npm test` include la verifica che la versione applicativa sia v1.4.
+`Bridge.html` viene servito esclusivamente dalla Web App Google con `?bridge=1&nonce=...`. Accetta messaggi solo da `https://leon30071980.github.io`, con nonce casuale e lista esplicita delle funzioni consentite. Il browser richiede lo stesso account Google per l'accesso alla Web App. Il codice frontend non contiene password e non espone un `doPost` pubblico. Il ponte effettua comunque chiamate privilegiate: non rendere pubblica la distribuzione Apps Script e non esporre il contenuto di `CLASPRC_JSON`.
 
-## Dove modificare il codice
+L'uso di HTMLService in iframe con autenticazione privata non è universalmente affidabile, a causa delle restrizioni dei browser su cookie di terze parti. Un collegamento da GitHub Pages non può essere garantito finché non viene collaudato nello specifico browser dell'utente. Se fallisce, occorre una soluzione backend OAuth dedicata oppure usare direttamente l'interfaccia Google privata.
 
-- `apps-script/Code.gs`: API, regole, foglio dati, scheduler.
-- `apps-script/Gunners.gs`: connettore Gunners; invariato rispetto alla v1.3.
-- `apps-script/WansportExtra.gs`: connettori sperimentali Pro e Punto G.
-- `apps-script/Index.html`, `Styles.html`, `Client.html`: interfaccia.
-- `apps-script/appsscript.json`: manifest con timezone `Europe/Rome`.
-- `.github/workflows/google-apps-script.yml`: pubblicazione Google con clasp 3.4.1.
-- `.github/workflows/ci.yml`: test.
-- `.github/workflows/pages.yml`: launcher GitHub Pages.
+## File e test
 
-**Non modificare più manualmente l'editor di Apps Script dopo aver avviato il deployment da GitHub**: alla pubblicazione successiva, clasp sovrascriverebbe quelle modifiche. Non committare file `.clasp.json`, `.clasprc.json`, credenziali o esportazioni autenticate dei siti.
+- `github-pages/index.html`, `styles.css`, `app.js`, `bridge.js`: interfaccia GitHub completa.
+- `index.html`: entrata per GitHub Pages via branch `/`.
+- `apps-script/Bridge.html`: gestisce il canale privato con `google.script.run`.
+- `apps-script/Code.gs`: routing su `doGet(e)` per pagina privata e bridge.
+- `apps-script/appsscript.json`: impostazioni Web App `MYSELF` / `USER_DEPLOYING`.
+- `.github/workflows/google-apps-script.yml`: deploy manuale, vincolato all'esistenza di una Web App verificata.
+- `npm test`: 29 test precedenti, verifiche statiche e test del bridge.
 
-## Versioni
+## Versionamento
 
-- v1.0: prototipo locale.
-- v1.1: Google Apps Script e archivio Drive/Sheets.
-- v1.2: lettura JSON Gunners (confermata successivamente dall'utente).
-- v1.3: connettori sperimentali Pro e Punto G, controlli programmati in sola lettura.
-- **v1.4: sorgenti su GitHub, CI automatica e deployment Google tramite clasp, con prima attivazione manuale protetta.**
+v1.4: repository e CI; v1.5: frontend GitHub Pages completo, ponte Apps Script privato e protezione del deployment. La versione è operativa solo quando entrambi i deployment risultano configurati e il collegamento è testato.
