@@ -8,7 +8,7 @@ let n=0, failLogin=false;
 function test(name,fn){fn();console.log('✓ '+name);n++;}
 const response=(code,body='',headers={})=>({getResponseCode:()=>code,getContentText:()=>body,getAllHeaders:()=>headers});
 const fixture=(id,day)=>({success:true,dati:{sportId:id==='pro'?42:15,sedi:[{risorse:[
-  {id:3,nome:'Campo Blu',isFuoriFinestraTemporale:false,
+  {id:3,nome:id==='pro'?'Campo Padel Coperto N.4 PRO GREEN':'Campo Blu',isFuoriFinestraTemporale:false,
     tslots:['18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30'].map(starttime=>({starttime,ts_start:day+' '+starttime+':00',published:true,full_tslot:false})),
     listaPrenotazioni:[{startdate:day,starttime:'19:30:00',endtime:'21:00:00'}]}
 ]}]}});
@@ -54,6 +54,22 @@ test('Ricerca reale simulata da Pro senza falso positivo',()=>{
   const r=run(`searchExtraWansport_('pro',{date:'2026-11-23',time:'18:00',duration:90,tolerance:0})`);
   assert.equal(r.status,'available');assert.equal(r.slots.length,1);assert.equal(r.slots[0].club_id,'pro');
   assert.ok(calls.some(c=>c.url.includes('filtroSport=42')));assert.ok(!JSON.stringify(r).includes('proSecret'));
+});
+test('PRO GREEN e Coperto riconosciuti dal nome del campo',()=>{
+  const r=run(`searchExtraWansport_('pro',{date:'2026-11-23',time:'18:00',duration:90,tolerance:0})`);
+  assert.equal(r.status,'available');
+  assert.equal(r.slots[0].location,'Vigatto');
+  assert.equal(r.slots[0].cover,'indoor');
+  assert.equal(r.slots[0].cover_source,'nome campo');
+});
+test('PRO PARMA e Open riconosciuti dal nome senza inventare il prezzo',()=>{
+  const resource=fixture('pro','2026-11-23').dati.sedi[0].risorse[0];
+  resource.nome='Campo Centrale Open N.1 - PRO PARMA';
+  const normalized=run('gunnersSlots_') // funzione esistente, nessuna richiesta HTTP
+  const slots=normalized({dati:{sedi:[{nome:'',risorse:[resource]}]}},'2026-11-23','18:00',90,0);
+  assert.equal(slots.length,1);
+  assert.equal(slots[0].cover,'outdoor');
+  assert.equal(slots[0].price,'');
 });
 test('Sovrapposizioni prenotate escluse per Punto G',()=>{
   const r=run(`searchExtraWansport_('puntog',{date:'2026-11-23',time:'20:00',duration:90,tolerance:0})`);

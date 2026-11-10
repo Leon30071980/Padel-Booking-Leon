@@ -33,3 +33,26 @@
 .slot-controls a{font-size:11px}
 @media(max-width:900px){.slot-line{grid-template-columns:1fr 1fr}.slot-controls{grid-column:1/-1}}
 @media(max-width:480px){.slot-line{display:flex;flex-direction:column;align-items:stretch}.slot-controls{grid-column:auto;flex-wrap:wrap}}
+
+/* v1.10 — risultati leggibili anche in colonne strette */
+.slot-list{display:flex;flex-direction:column;gap:9px}
+.slot-list .slot-line{
+  display:flex;flex-direction:column;align-items:stretch;gap:9px;
+  padding:12px 14px;border:1px solid #385b47;border-radius:10px;
+  background:#1b3328;min-width:0;flex-wrap:nowrap
+}
+.slot-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;min-width:0}
+.slot-heading strong{font-size:13px;line-height:1.45;overflow-wrap:anywhere;max-width:68%}
+.slot-heading .slot-time{font-size:13px;font-weight:700;white-space:nowrap;color:#eaffec}
+.slot-metadata{display:flex;flex-wrap:wrap;gap:7px 12px;align-items:center}
+.slot-chip{font-size:12px;color:#bdd7c5;line-height:1.4;overflow-wrap:anywhere}
+.slot-chip small{font-size:10px;color:#b3c6b9}
+.slot-chip .slot-price{font-size:13px;color:#baff8c}
+.slot-controls{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;border-top:1px solid #34513f;padding-top:9px}
+.slot-controls button,.slot-controls a{font-size:12px;padding:7px 11px;border-radius:8px;min-height:32px}
+.slot-controls a{display:inline-flex;align-items:center;color:#baff8c;border:1px solid #476849;text-decoration:none}
+@media(max-width:560px){
+ .slot-heading{flex-wrap:wrap}
+ .slot-heading strong{max-width:100%}
+ .slot-controls{justify-content:flex-start}
+}
