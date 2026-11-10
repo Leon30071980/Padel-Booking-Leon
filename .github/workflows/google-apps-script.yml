@@ -1,0 +1,63 @@
+name: Publish Google Apps Script
+# Per sicurezza: il primo rilascio richiede un avvio manuale e i secret.
+# L'automatismo su main si abilita impostando AUTO_DEPLOY_ENABLED=true in GitHub Variables.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/google-apps-script.yml'
+permissions:
+  contents: read
+concurrency:
+  group: padel-booking-google-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.AUTO_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: google-production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate source and unit tests
+        run: npm test
+      - name: Check required secrets
+        env:
+          APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
+          APPS_SCRIPT_DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          test -n "$APPS_SCRIPT_ID" || { echo 'Missing APPS_SCRIPT_ID'; exit 1; }
+          test -n "$APPS_SCRIPT_DEPLOYMENT_ID" || { echo 'Missing APPS_SCRIPT_DEPLOYMENT_ID'; exit 1; }
+          test -n "$CLASPRC_JSON" || { echo 'Missing CLASPRC_JSON'; exit 1; }
+      - name: Create local clasp configuration
+        env:
+          APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          mkdir -p "$HOME"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const id=process.env.APPS_SCRIPT_ID;
+          if (!/^[A-Za-z0-9_-]{15,}$/.test(id)) throw Error('APPS_SCRIPT_ID non valido');
+          JSON.parse(fs.readFileSync(process.env.HOME+'/.clasprc.json','utf8'));
+          fs.writeFileSync('.clasp.json',JSON.stringify({scriptId:id,rootDir:'apps-script'}));
+          NODE
+      - name: Push versioned code to existing script
+        run: npx --yes @google/clasp@3.4.1 push --force
+      - name: Update existing web app deployment
+        env:
+          DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
+        run: |
+          # Updating an existing deployment preserves its web app URL and access settings.
+          npx --yes @google/clasp@3.4.1 update-deployment "$DEPLOYMENT_ID" --description 'Padel Booking Leon v1.4' >/dev/null
+          echo 'Web app deployment updated to v1.4.'

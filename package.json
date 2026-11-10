@@ -1,0 +1,13 @@
+{
+  "name": "padel-booking-leon",
+  "private": true,
+  "version": "1.4.0",
+  "description": "Padel Booking Leon — v1.4 (Google Apps Script from GitHub)",
+  "scripts": {
+    "test": "node tests/test-app.js && node tests/test-gunners.js && node tests/test-extra.js && node scripts/validate.mjs",
+    "check": "node scripts/validate.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

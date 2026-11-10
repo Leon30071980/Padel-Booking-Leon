@@ -1,0 +1,13 @@
+# Confidential OAuth and Apps Script identifiers (never commit)
+.clasp.json
+.clasprc.json
+**/.clasprc.json
+.env
+.env.*
+!.env.example
+*.har
+*credentials*
+private/
+secrets/
+node_modules/
+.DS_Store

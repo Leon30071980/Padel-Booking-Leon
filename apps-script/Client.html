@@ -1,0 +1,198 @@
+<script>
+/* Padel Booking Leon — v1.4 | Apps Script HTMLService, nessuna password nel frontend. */
+(()=>{
+  'use strict';
+  const $ = id=>document.getElementById(id);
+  const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const state={clubs:[],jobs:[],schedulerActive:false,online:false};
+  let toastTimer;
+  function api(functionName,...args){
+    return new Promise((resolve,reject)=>{
+      if(!window.google?.script?.run){reject(Error('Aprire l’app dall’indirizzo del deployment Google Apps Script.'));return;}
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(e=>reject(Error(e?.message||'Errore Google Apps Script')))[functionName](...args);
+    });
+  }
+  function toast(message,bad=false){const el=$('toast');el.textContent=message;el.className='toast show'+(bad?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='toast',4800);}
+  function romeDate(offsetDays=0){
+    const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const v=k=>Number(p.find(x=>x.type===k).value),d=new Date(Date.UTC(v('year'),v('month')-1,v('day')+offsetDays));
+    return d.toISOString().slice(0,10);
+  }
+  function prettyDate(v){if(!v)return '—';try{return new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(v+'T12:00:00Z'));}catch{return v;}}
+  function prettyStamp(v){if(!v)return 'Da verificare';try{return new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Rome'}).format(new Date(v));}catch{return v;}}
+  function clock(){$('romeClock').textContent=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date());}
+  function connection(on,msg){state.online=on;const el=$('connection');el.className='connection '+(on?'online':'offline');el.innerHTML='<i></i> '+esc(msg);}
+  function ruleLabel(c){return c.rule_type==='calendar_days'?`${c.advance_value} giorni prima · ${c.release_time}`:c.rule_type==='rolling_hours'?`${c.advance_value} ore prima della partita`:'Da verificare';}
+  function choices(id){
+    const previous=new Set(selected(id));
+    $(id).innerHTML=state.clubs.map(c=>`<label class="choice"><input type="checkbox" value="${esc(c.id)}" ${previous.size?previous.has(c.id)?'checked':'':c.enabled?'checked':''} ${c.enabled?'':'disabled'}><span>${esc(c.name)}</span></label>`).join('');
+  }
+  function selected(id){return Array.from($(id).querySelectorAll('input:checked:not(:disabled)')).map(e=>e.value);}
+  function renderClubs(){
+    $('metricClubs').textContent=state.clubs.length;
+    const verified=state.clubs.filter(c=>c.connector.ready).length;
+    $('metricReady').innerHTML=verified+'<span class="metric-suffix"> / '+state.clubs.length+'</span>';
+    $('clubGrid').innerHTML=state.clubs.map(c=>{
+      const connected=c.connector.ready, configured=c.connector.configured;
+      const isWS=c.platform==='Wansport';
+      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):'Non collegato al calendario';
+      return `<article class="club-card"><div class="club-top"><span class="platform-tag">${esc(c.platform)}</span><span class="club-priority">PRIORITÀ ${c.priority}</span></div>
+      <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
+      <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
+      <div class="club-actions"><button type="button" class="btn btn-outline" data-edit-club="${esc(c.id)}">⚙ Regole</button><a class="btn btn-outline" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">↗ Sito</a></div>
+      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-probe="'+esc(c.id)+'">Verifica pagina pubblica</button>'}</article>`;
+    }).join('');
+    choices('searchClubChoices');choices('jobClubChoices');
+  }
+  const labels={pending:'Registrata',cancelled:'Annullata'};
+  function renderJobs(){
+    $('metricJobs').textContent=state.jobs.filter(j=>j.status==='pending').length;
+    if(!state.jobs.length){$('jobsPanel').innerHTML='<div class="empty-state"><strong>Nessuna richiesta</strong><p>Imposti una data e salvi una richiesta.</p></div>';return;}
+    $('jobsPanel').innerHTML='<div class="job-row header-row"><div>Partita</div><div>Centri</div><div>Modalità</div><div>Stato</div><div>Azioni</div></div>'+
+      state.jobs.map(j=>{
+        const due=j.clubs.filter(c=>c.next_at).sort((a,b)=>a.next_at.localeCompare(b.next_at))[0];
+        const msg=due?`Apertura teorica ${prettyStamp(due.next_at)}`:'Nessun controllo eseguibile';
+        const blocked=j.clubs.some(c=>c.state==='needs_connector');
+        const found=j.clubs.some(c=>c.state==='found');
+        const checked=j.clubs.some(c=>c.state==='checked_no_slots');
+        return `<div class="job-row"><div class="job-main"><strong>${esc(prettyDate(j.match_date))} · ${esc(j.match_time)}</strong><small>${j.duration} min · ${esc(msg)}</small></div>
+          <div class="job-cell">${j.clubs.length} centri<small>${j.clubs.map(c=>esc(c.name)).join(', ')}</small></div>
+          <div class="job-cell">${j.mode==='auto'?'Auto futura (non attiva)':'Controllo di sola lettura'}<small>±${j.tolerance}m</small></div>
+          <div><span class="status-badge warn">${found?'Slot trovati':blocked?'Controllo non riuscito':checked?'Nessuno slot':esc(labels[j.status]||j.status)}</span></div>
+          <div class="job-actions"><button type="button" class="mini-button" data-detail="${esc(j.id)}">Dettagli</button>${j.status==='pending'?`<button type="button" class="mini-button danger" data-cancel="${esc(j.id)}">Annulla</button>`:''}</div></div>`;
+      }).join('');
+  }
+  async function loadAll(){
+    try{
+      const data=await api('getDashboard');state.clubs=data.clubs;state.jobs=data.jobs;state.schedulerActive=data.schedulerActive;
+      connection(true,'Google Drive collegato');renderClubs();renderJobs();schedulerState();await previewOpening();
+    }catch(e){connection(false,'Configurazione richiesta');toast(e.message,true);}
+  }
+  function schedulerState(){$('schedulerStatus').textContent=state.schedulerActive?'Trigger attivo: un controllo reale in sola lettura all’apertura teorica.':'Trigger disattivato: nessuna ricerca programmata.';}
+  async function previewOpening(){
+    if(!state.online)return;
+    const date=$('jobDate').value,time=$('jobTime').value;
+    if(!date||!time)return;
+    try{
+      const data=await api('getOpeningPreview',date,time);const ids=selected('jobClubChoices');
+      $('openingPreview').innerHTML=data.filter(r=>ids.includes(r.club_id)).map(r=>`<div><strong>${esc(state.clubs.find(c=>c.id===r.club_id)?.name||r.club_id)}:</strong> ${r.opening_at?esc(prettyStamp(r.opening_at)):'Regola non configurata'}</div>`).join('')||'Selezioni almeno un centro.';
+    }catch(e){$('openingPreview').textContent=e.message;}
+  }
+  async function search(e){
+    e.preventDefault();const clubs=selected('searchClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
+    const btn=$('searchBtn');btn.disabled=true;$('searchResults').textContent='Controllo dei calendari abilitati…';
+    try{
+      const data=await api('searchAvailability',{date:$('searchDate').value,time:$('searchTime').value,
+        duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value),clubs});
+      $('searchResults').innerHTML=data.results.map(r=>{
+        const club=state.clubs.find(c=>c.id===r.club_id);
+        const found=r.status==='available';
+        const status={available:'Slot compatibili',no_slots:'Nessuno slot',outside_window:'Fuori finestra',auth_required:'Accesso richiesto',error:'Da verificare',not_configured:'Non collegato'}[r.status]||'Da verificare';
+        const slots=(r.slots||[]).map(s=>`<div class="slot-line"><strong>${esc(s.court)}</strong><span>${esc(s.start)}–${esc(s.end)}</span><a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer">Apri portale ↗</a></div>`).join('');
+        return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
+          <small>${esc(r.reason)}</small>${slots?'<div class="slot-list">'+slots+'</div>':''}
+          ${!found?`<a target="_blank" rel="noopener noreferrer" href="${esc(club?.url||'#')}">Apri il portale ↗</a>`:''}</div><span class="result-tag">${esc(status)}</span></div>`;
+      }).join('');
+      // Aggiorna gli stati dei collegamenti Wansport senza duplicare le richieste HTTP.
+      if(clubs.some(id=>['gunners','pro','puntog'].includes(id)))await loadAll();
+    }catch(e){toast(e.message,true);$('searchResults').textContent=e.message;}finally{btn.disabled=false;btn.textContent='⌕ Verifica disponibilità';}
+  }
+  async function saveRequest(e){
+    e.preventDefault();const clubs=selected('jobClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
+    const mode=document.querySelector('input[name="jobMode"]:checked').value;
+    if(mode==='auto'&&!confirm('La richiesta sarà soltanto salvata: in questa versione NON verrà effettuata alcuna prenotazione. Proseguire?'))return;
+    const btn=$('scheduleBtn');btn.disabled=true;
+    try{
+      await api('createRequest',{date:$('jobDate').value,time:$('jobTime').value,duration:Number($('jobDuration').value),
+        tolerance:Number($('jobTolerance').value),clubs,mode});
+      toast('Richiesta salvata su Google Drive. La prenotazione reale non è attiva.');await loadAll();$('attivita').scrollIntoView({behavior:'smooth'});
+    }catch(e){toast(e.message,true);}finally{btn.disabled=false;}
+  }
+  function editClub(id){
+    const c=state.clubs.find(c=>c.id===id);if(!c)return;
+    $('editClubId').value=id;$('clubDialogTitle').textContent=c.name;
+    $('editRule').value=c.rule_type;$('editAdvance').value=c.advance_value??'';$('editRelease').value=c.release_time;
+    $('editPriority').value=c.priority;$('editEnabled').checked=c.enabled;changeRule();$('clubDialog').showModal();
+  }
+  function changeRule(){const type=$('editRule').value;$('editAdvance').disabled=type==='unknown';$('releaseWrap').classList.toggle('hidden',type!=='calendar_days');}
+  async function saveClub(e){
+    e.preventDefault();
+    try{await api('saveClubRule',{id:$('editClubId').value,enabled:$('editEnabled').checked,priority:Number($('editPriority').value),rule_type:$('editRule').value,
+      advance_value:$('editRule').value==='unknown'?null:Number($('editAdvance').value),release_time:$('editRelease').value});
+      $('clubDialog').close();toast('Regola salvata in Google Sheets');await loadAll();
+    }catch(e){toast(e.message,true);}
+  }
+  async function detail(id){
+    try{const j=await api('getRequestDetail',id);$('detailTitle').textContent=prettyDate(j.match_date)+' · '+j.match_time;
+      $('detailBody').innerHTML='<div class="overline">CENTRI</div>'+j.clubs.map(c=>`<div class="detail-row"><strong>${esc(c.name)}</strong><small>${esc(c.state)} · Apertura: ${esc(prettyStamp(c.open_at))}</small><div><small>${esc(c.detail)}</small></div></div>`).join('')+
+        '<div class="overline" style="margin-top:18px">CRONOLOGIA</div>'+j.events.map(x=>`<div class="detail-row"><small>${esc(prettyStamp(x.stamp))} · ${esc(x.message)}</small></div>`).join('');
+      $('detailDialog').showModal();
+    }catch(e){toast(e.message,true);}
+  }
+  async function cancel(id){if(!confirm('Annullare la richiesta?'))return;try{await api('cancelRequest',id);toast('Annullata');await loadAll();}catch(e){toast(e.message,true);}}
+  async function probe(id){toast('Controllo della sola pagina pubblica…');try{const data=await api('checkPublicPortal',id);
+      toast(data.reachable?`Portale raggiungibile (HTTP ${data.http_status}); calendario non verificato.`:data.note,!data.reachable);
+    }catch(e){toast(e.message,true);}}
+  async function scheduler(enabled){
+    try{const data=await api(enabled?'installScheduler':'removeScheduler');state.schedulerActive=data.installed;schedulerState();toast(enabled?'Trigger di controllo attivato':'Trigger disattivato');}
+    catch(e){toast(e.message,true);}
+  }
+  function showWansport(id){
+    const club=state.clubs.find(c=>c.id===id);
+    if(!club||club.platform!=='Wansport')return;
+    $('wansportClubId').value=id;
+    $('wansportDialogTitle').textContent=club.name;
+    $('wansportUsername').value='';$('wansportPassword').value='';
+    $('wansportSportId').value='15';
+    $('wansportSportWrap').classList.toggle('hidden',id==='gunners');
+    $('wansportMessage').textContent='Le password già memorizzate non sono mostrate. Nuove credenziali sostituiscono le precedenti.';
+    $('wansportDialog').showModal();
+  }
+  async function saveAndTestWansport(e){
+    e.preventDefault();const btn=$('wansportSave');btn.disabled=true;
+    const id=$('wansportClubId').value;
+    $('wansportMessage').textContent='Verifica del calendario in corso. Nessuna prenotazione sarà inviata.';
+    try{
+      await api('saveWansportCredentials',{clubId:id,username:$('wansportUsername').value,
+        password:$('wansportPassword').value,sportId:Number($('wansportSportId').value)});
+      $('wansportPassword').value='';$('wansportUsername').value='';
+      const result=await api('testWansportConnection',id);
+      $('wansportMessage').textContent=result.ok?'Test riuscito: calendario JSON accessibile in sola lettura.':
+        `Test non riuscito: ${result.note}`;
+      toast(result.ok?'Connettore Wansport verificato':'Accesso Wansport non verificato',!result.ok);
+      await loadAll();
+    }catch(err){$('wansportMessage').textContent='Errore: '+err.message;toast(err.message,true);}
+    finally{btn.disabled=false;}
+  }
+  async function removeWansport(){
+    const id=$('wansportClubId').value;
+    if(!confirm('Eliminare le credenziali del centro selezionato?'))return;
+    try{await api('deleteWansportCredentials',id);$('wansportPassword').value='';$('wansportUsername').value='';
+      $('wansportMessage').textContent='Credenziali eliminate.';toast('Credenziali rimosse');await loadAll();}
+    catch(err){toast(err.message,true);}
+  }
+  function setup(){
+    const date=romeDate(7);['searchDate','jobDate'].forEach(id=>{$(id).min=romeDate();$(id).value=date;});clock();setInterval(clock,1000);
+    $('searchForm').addEventListener('submit',search);$('jobForm').addEventListener('submit',saveRequest);
+    $('wansportForm').addEventListener('submit',saveAndTestWansport);$('wansportDelete').addEventListener('click',removeWansport);
+    $('clubForm').addEventListener('submit',saveClub);$('editRule').addEventListener('change',changeRule);
+    ['jobDate','jobTime','jobClubChoices'].forEach(id=>$(id).addEventListener('change',previewOpening));
+    $('schedulerBtn').addEventListener('click',()=>{$('schedulerDialog').showModal();schedulerState();});
+    $('enableScheduler').addEventListener('click',()=>scheduler(true));$('disableScheduler').addEventListener('click',()=>scheduler(false));
+    $('refreshBtn').addEventListener('click',loadAll);
+    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-close]');if(!t)return;
+      if(t.dataset.editClub)editClub(t.dataset.editClub);
+      if(t.dataset.detail)detail(t.dataset.detail);
+      if(t.dataset.cancel)cancel(t.dataset.cancel);
+      if(t.dataset.probe)probe(t.dataset.probe);
+      if(t.dataset.connectWansport)showWansport(t.dataset.connectWansport);
+      if(t.dataset.close)$(t.dataset.close).close();
+    });
+    document.querySelectorAll('input[name="jobMode"]').forEach(n=>n.addEventListener('change',()=>{
+      $('autoWarning').classList.toggle('hidden',document.querySelector('input[name="jobMode"]:checked').value!=='auto');
+    }));
+    loadAll();
+  }
+  document.addEventListener('DOMContentLoaded',setup);
+})();
+</script>
