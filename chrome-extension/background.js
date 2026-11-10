@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.8 · MV3: Playtomic solo GET, senza cookie o password. */
+/* Padel Booking Leon v1.9 · MV3: Playtomic solo GET, senza cookie o password. */
 'use strict';
 const CHANNEL='pbl-playtomic-chrome-v1';
 const ORIGIN='https://leon30071980.github.io';
@@ -35,7 +35,7 @@ function parseSlots(data,q){
    if(!Number.isFinite(start)||Number(s.duration)!==q.duration||
       Math.abs(start-target)>q.tolerance||start+q.duration>1440)continue;
    const label=r.resource_name||r.name||'Campo '+r.resource_id.slice(0,8);
-   out.push({club_id:'hero',court_id:r.resource_id,court:txt(label),date:q.date,
+   out.push({club_id:'hero',court_id:r.resource_id,court:txt(label),date:q.date,location:'San Prospero',cover:'unknown',
      start:hm(start),end:hm(start+q.duration),duration:q.duration,price:txt(s.price,40)});
   }
  }
