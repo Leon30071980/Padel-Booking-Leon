@@ -7,7 +7,7 @@
 .probe{margin-top:8px;width:100%;font-size:10px!important;padding:7px!important;}
 .result-body{flex:1;min-width:0}.slot-list{margin-top:11px;display:flex;flex-direction:column;gap:6px}.slot-line{display:flex;gap:8px;align-items:center;justify-content:space-between;border-radius:7px;padding:8px 10px;border:1px solid #345240;background:#1b3328;font-size:11px}.slot-line span{font-variant-numeric:tabular-nums;color:#dcffe1}.slot-line a{white-space:nowrap}.result-row{align-items:flex-start}.result-row>.result-tag{flex-shrink:0;margin-top:1px}@media(max-width:480px){.slot-line{flex-wrap:wrap}.result-row{flex-direction:column}.result-row .result-tag{align-self:flex-start}}
 
-/* GitHub Pages v1.5 — collegamento privato al backend */
+/* GitHub Pages v1.6 — collegamento privato al backend */
 .github-connect{background:#10201b;border-bottom:1px solid #355446;padding:14px clamp(14px,4vw,42px);color:#eaf6ec}
 .github-connect__head{display:flex;gap:14px;justify-content:space-between;align-items:center}
 .github-connect__head strong{font-size:15px}.github-connect__head p{margin:2px 0 0;color:#a7c3b1;font-size:12px}
@@ -18,3 +18,8 @@
 .github-connect__controls input{min-width:150px;flex:1;border:1px solid #486956;padding:10px 12px;border-radius:10px;background:#0a1713;color:#f0fff0;font:inherit}
 .github-connect__controls .btn{white-space:nowrap}.github-connect__form small{display:block;color:#a9c0b0;margin-top:7px;font-size:11px}
 @media(max-width:720px){.github-connect__head{align-items:flex-start;flex-direction:column;gap:6px}.github-connect__controls{flex-wrap:wrap}.github-connect__controls input{flex-basis:100%}}
+
+/* v1.6 — nasconde il pannello dopo il collegamento; riapribile dall'intestazione. */
+.github-connect[hidden]{display:none!important}
+.backend-settings-button{padding:8px 11px!important;white-space:nowrap;font-size:12px!important;border:1px solid #3c594b!important}
+@media(max-width:600px){.backend-settings-button span{display:none}.backend-settings-button{padding:8px!important}}
