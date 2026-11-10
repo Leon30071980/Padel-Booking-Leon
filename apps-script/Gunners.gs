@@ -176,9 +176,13 @@ function gunnersSlots_(data,day,preferred,duration,tolerance){
         const namedCover=/\b(?:coperto|indoor)\b/i.test(courtName)?'indoor':
           /\b(?:scoperto|open|outdoor)\b/i.test(courtName)?'outdoor':'unknown';
         const cover=explicitCover!=='unknown'?explicitCover:namedCover;
+        // L'ID della fascia iniziale è necessario per aprire il preventivo
+        // Wansport. Non confonderlo con l'ID del campo.
+        const firstPart=byStart.get(start);
+        const tslotId=pblTslotId_(firstPart);
         result.push({court_id:String(resource.id),court:courtName,start:hm(start),end:hm(start+duration),
           duration,club_id:'gunners',date:day,venue:String(sede.nome||'').slice(0,90),
-          cover,cover_source:explicitCover!=='unknown'?'calendario':namedCover!=='unknown'?'nome campo':'unknown',price:''});
+          tslot_id:tslotId||'',cover,cover_source:explicitCover!=='unknown'?'calendario':namedCover!=='unknown'?'nome campo':'unknown',price:''});
       }
     }
   }
