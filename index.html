@@ -8,7 +8,7 @@
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="github-pages/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="github-pages/styles.css">
-  <title>Padel Booking Leon — v1.6</title>
+  <title>Padel Booking Leon — v1.7</title>
 </head>
 <body>
   <div class="background-glow" aria-hidden="true"></div>
@@ -32,7 +32,7 @@
     <header class="header">
       <a class="brand" href="#top" aria-label="Padel Booking Leon">
         <span class="brand-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5c-9 0-15 6-15 16 0 9 6 15 15 15s15-6 15-15C39 11 33 5 24 5Z" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M20 36v9h8v-9M16 11l16 20M10 21l22-10M14 30l20-19M16 11l22 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
-        <span class="brand-type"><strong>PADEL <span>BOOKING</span> LEON</strong><small>CLOUD EDITION <b>· v1.6</b></small></span>
+        <span class="brand-type"><strong>PADEL <span>BOOKING</span> LEON</strong><small>CLOUD EDITION <b>· v1.7</b></small></span>
       </a>
       <div class="header-actions"><span class="connection" id="connection"><i></i> Controllo connessione…</span><button type="button" class="btn btn-ghost backend-settings-button" id="backendSettingsBtn" aria-controls="backendPanel" aria-expanded="true" title="Impostazioni collegamento Google">🔐 <span>Google</span></button><button type="button" class="btn btn-ghost" id="schedulerBtn">⚙ <span>Cloud</span></button></div>
     </header>
@@ -70,7 +70,7 @@
             <div class="field full"><label>Centri in ordine di priorità</label><div id="jobClubChoices" class="club-choices"></div></div>
             <div class="field full"><label>Obiettivo</label><div class="mode-switch" role="radiogroup" aria-label="Modalità di controllo"><label><input type="radio" name="jobMode" value="notify" checked><span>◉ &nbsp;Controllo all’apertura</span></label><label><input type="radio" name="jobMode" value="auto"><span>⚡ &nbsp;Prenotazione futura*</span></label></div></div>
             <div id="openingPreview" class="opening-preview full">Le finestre di prenotazione saranno calcolate dalle regole dei club.</div>
-            <div id="autoWarning" class="warning full hidden">La modalità automatica è soltanto un obiettivo futuro: in v1.6 nessuna prenotazione né pagamento vengono eseguiti. Il trigger effettua un controllo in sola lettura.</div>
+            <div id="autoWarning" class="warning full hidden">La modalità automatica è soltanto un obiettivo futuro: in v1.7 nessuna prenotazione né pagamento vengono eseguiti. Il trigger effettua un controllo in sola lettura.</div>
             <button type="submit" class="btn btn-light full" id="scheduleBtn">＋ &nbsp;Salva richiesta</button>
           </form>
         </article>
@@ -79,7 +79,7 @@
       <section id="centri" class="section-block"><div class="section-title"><div><div class="overline">03 / CENTRI SPORTIVI</div><h2>I tuoi centri</h2><p>Gestisca per ogni centro le regole effettive di apertura delle prenotazioni.</p></div><span class="subtle-hint">Le impostazioni sono indipendenti</span></div><div class="club-grid" id="clubGrid"><div class="empty-inline">Caricamento centri…</div></div></section>
 
       <section class="section-block" id="attivita"><div class="section-title"><div><div class="overline">04 / ATTIVITÀ</div><h2>Richieste registrate</h2><p>Stato delle richieste salvate in Google Sheets. Il trigger, se attivato, verifica il calendario una volta all’apertura teorica e registra l’esito. Non prenota.</p></div><button class="btn btn-outline btn-small" id="refreshBtn" type="button">↻ &nbsp;Aggiorna</button></div><div class="panel jobs-panel" id="jobsPanel"><div class="empty-state"><strong>Nessuna ricerca programmata</strong><p>Quando aggiungerà una richiesta, comparirà qui.</p></div></div></section>
-      <footer><span>PADEL BOOKING LEON <b>v1.6</b> · GOOGLE DRIVE</span><span>Non affiliato a Wansport o Playtomic · Tre connettori Wansport in sola lettura (Pro/Punto G da validare)</span></footer>
+      <footer><span>PADEL BOOKING LEON <b>v1.7</b> · GOOGLE DRIVE</span><span>Non affiliato a Wansport o Playtomic · Tre connettori Wansport in sola lettura (Pro/Punto G da validare)</span></footer>
     </main>
   </div>
 
