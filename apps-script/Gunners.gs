@@ -173,8 +173,8 @@ function gunnersSlots_(data,day,preferred,duration,tolerance){
         const courtName=String(resource.nome||('Campo '+resource.id));
         const explicitCover=typeof resource.coperto==='boolean'?(resource.coperto?'indoor':'outdoor'):
           typeof resource.indoor==='boolean'?(resource.indoor?'indoor':'outdoor'):'unknown';
-        const namedCover=/\\b(?:coperto|indoor)\\b/i.test(courtName)?'indoor':
-          /\\b(?:scoperto|open|outdoor)\\b/i.test(courtName)?'outdoor':'unknown';
+        const namedCover=/\b(?:coperto|indoor)\b/i.test(courtName)?'indoor':
+          /\b(?:scoperto|open|outdoor)\b/i.test(courtName)?'outdoor':'unknown';
         const cover=explicitCover!=='unknown'?explicitCover:namedCover;
         result.push({court_id:String(resource.id),court:courtName,start:hm(start),end:hm(start+duration),
           duration,club_id:'gunners',date:day,venue:String(sede.nome||'').slice(0,90),
