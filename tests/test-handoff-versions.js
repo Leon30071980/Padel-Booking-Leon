@@ -1,0 +1,22 @@
+/* Padel Booking Leon v1.15 — handshake Chrome / Wansport and race regression. */
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+const bridge=fs.readFileSync('github-pages/chrome-bridge.js','utf8');
+const content=fs.readFileSync('chrome-extension/content.js','utf8');
+const background=fs.readFileSync('chrome-extension/background.js','utf8');
+const app=fs.readFileSync('github-pages/app.js','utf8');
+const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
+assert.equal(manifest.version,'1.15.0');
+assert.match(content,/wansport-handoff/);
+assert.match(content,/version:'v1\.15'/);
+assert.match(bridge,/capabilities\.has\('wansport-handoff'\)/);
+assert.match(app,/Guida Wansport:/);
+assert.match(app,/handoffFailed/);
+assert.match(background,/url:'about:blank'/);
+assert.match(background,/await chrome\.storage\.session\.set/);
+assert.match(background,/await chrome\.tabs\.update/);
+const a=background.indexOf("await chrome.storage.session.set({[key]:data})");
+const b=background.indexOf("await chrome.tabs.update(tab.id,{url})");
+assert.ok(a>=0&&b>a,'La navigazione deve avvenire DOPO il salvataggio dei dati');
+assert.match(background,/catch\(err\)\{/);
+new vm.Script(bridge);new vm.Script(content);new vm.Script(background);
+console.log('Wansport v1.15: handshake di versione, diagnosi e sequenza di apertura verificati.');

@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.14 — Playtomic / Padel Hero Parma — SOLA LETTURA.
+ * Padel Booking Leon v1.15 — Playtomic / Padel Hero Parma — SOLA LETTURA.
  * Endpoint e campi osservati dal proprietario in Chrome il 10/11/2026.
  * API web non ufficialmente garantita: mai usare credenziali, token o POST.
  */

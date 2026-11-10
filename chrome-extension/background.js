@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.14 · MV3: Playtomic solo GET, senza cookie o password. */
+/* Padel Booking Leon v1.15 · MV3: Playtomic solo GET, senza cookie o password. */
 'use strict';
 const CHANNEL='pbl-playtomic-chrome-v1';
 const ORIGIN='https://leon30071980.github.io';
@@ -98,14 +98,21 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
    const data=validHandoff(msg.payload);
    if(!data){respond({ok:false,error:'Dati della fascia non validi.'});return false;}
    const url='https://'+WS_HOSTS[data.club_id]+'/start';
-   chrome.tabs.create({url,active:true},async tab=>{
+   // Cruciale: prima registrare il riepilogo per ID scheda,
+   // poi navigare verso Wansport, evitando la corsa col content script.
+   chrome.tabs.create({url:'about:blank',active:true},async tab=>{
      if(chrome.runtime.lastError||!tab||!Number.isInteger(tab.id)){
-       respond({ok:false,error:'Impossibile aprire il portale Wansport.'});return;
+       respond({ok:false,error:'Impossibile creare la scheda Wansport.'});return;
      }
+     const key='pbl_wshandoff_'+tab.id;
      try{
-       await chrome.storage.session.set({['pbl_wshandoff_'+tab.id]:data});
+       await chrome.storage.session.set({[key]:data});
+       await chrome.tabs.update(tab.id,{url});
        respond({ok:true,tab_id:tab.id});
-     }catch(err){respond({ok:false,error:'Impossibile preparare la guida Wansport.'});}
+     }catch(err){
+       try{await chrome.storage.session.remove(key);}catch(ignored){}
+       respond({ok:false,error:'Impossibile preparare la scheda Wansport: '+txt(err?.message||err,110)});
+     }
    });
    return true;
  }
