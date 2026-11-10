@@ -1,10 +1,10 @@
 
-/* Padel Booking Leon — v1.5 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.8 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
   const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const state={clubs:[],jobs:[],schedulerActive:false,online:false};
+  const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false};
   let toastTimer;
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
@@ -23,21 +23,25 @@
   function choices(id){
     const previous=new Set(selected(id));
     $(id).innerHTML=state.clubs.map(c=>`<label class="choice"><input type="checkbox" value="${esc(c.id)}" ${previous.size?previous.has(c.id)?'checked':'':c.enabled?'checked':''} ${c.enabled?'':'disabled'}><span>${esc(c.name)}</span></label>`).join('');
+    if(id==='jobClubChoices'){
+      const hero=$(id).querySelector('input[value="hero"]');
+      if(hero){hero.checked=false;hero.disabled=true;hero.closest('label').title='Padel Hero richiede Chrome attivo e non è programmabile sul backend cloud.';}
+    }
   }
   function selected(id){return Array.from($(id).querySelectorAll('input:checked:not(:disabled)')).map(e=>e.value);}
   function renderClubs(){
     $('metricClubs').textContent=state.clubs.length;
-    const verified=state.clubs.filter(c=>c.connector.ready).length;
+    const verified=state.clubs.filter(c=>c.id==='hero'?state.playtomicLive:c.connector.ready).length;
     $('metricReady').innerHTML=verified+'<span class="metric-suffix"> / '+state.clubs.length+'</span>';
     $('clubGrid').innerHTML=state.clubs.map(c=>{
-      const connected=c.connector.ready, configured=c.connector.configured;
+      const connected=c.platform==='Playtomic'?state.playtomicLive:c.connector.ready, configured=c.connector.configured;
       const isWS=c.platform==='Wansport';
-      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):connected?'Calendario Playtomic verificato':'Verifica disponibilità Playtomic necessaria';
+      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):(connected?'Calendario Playtomic letto da Chrome':window.PBL_CHROME?.installed()?'Estensione Chrome rilevata: verificare il calendario':'Estensione Chrome necessaria su questo dispositivo');
       return `<article class="club-card"><div class="club-top"><span class="platform-tag">${esc(c.platform)}</span><span class="club-priority">PRIORITÀ ${c.priority}</span></div>
       <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
       <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
       <div class="club-actions"><button type="button" class="btn btn-outline" data-edit-club="${esc(c.id)}">⚙ Regole</button><a class="btn btn-outline" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">↗ Sito</a></div>
-      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">🔎 Verifica Playtomic</button>'}</article>`;
+      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">🧩 Verifica estensione Chrome</button>'}</article>`;
     }).join('');
     choices('searchClubChoices');choices('jobClubChoices');
   }
@@ -79,9 +83,22 @@
     e.preventDefault();const clubs=selected('searchClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
     const btn=$('searchBtn');btn.disabled=true;$('searchResults').textContent='Controllo dei calendari abilitati…';
     try{
-      const data=await api('searchAvailability',{date:$('searchDate').value,time:$('searchTime').value,
-        duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value),clubs});
-      $('searchResults').innerHTML=data.results.map(r=>{
+      const req={date:$('searchDate').value,time:$('searchTime').value,
+        duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value)};
+      const otherClubs=clubs.filter(id=>id!=='hero');
+      // Wansport resta sul backend Google; Playtomic viene letto SOLO nel Chrome locale.
+      const work=clubs.map(id=>id==='hero'
+        ?window.PBL_CHROME.query(req).catch(err=>({club_id:'hero',status:'error',slots:[],
+          reason:err.message||'Estensione Chrome non disponibile.'}))
+        :Promise.resolve(null));
+      const remote=otherClubs.length?await api('searchAvailability',{...req,clubs:otherClubs}):{results:[]};
+      const heroResults=await Promise.all(work);
+      if(clubs.includes('hero'))state.playtomicLive=heroResults.some(r=>r&&r.club_id==='hero'&&['available','no_slots'].includes(r.status));
+      const remoteById=new Map(remote.results.map(r=>[r.club_id,r]));
+      const hero=heroResults.find(r=>r&&r.club_id==='hero');
+      const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
+      if(clubs.includes('hero'))renderClubs();
+      $('searchResults').innerHTML=results.map(r=>{
         const club=state.clubs.find(c=>c.id===r.club_id);
         const found=r.status==='available';
         const status={available:'Slot compatibili',no_slots:'Nessuno slot',outside_window:'Fuori finestra',auth_required:'Accesso richiesto',error:'Da verificare',not_configured:'Non collegato'}[r.status]||'Da verificare';
@@ -131,13 +148,21 @@
       toast(data.reachable?`Portale raggiungibile (HTTP ${data.http_status}); calendario non verificato.`:data.note,!data.reachable);
     }catch(e){toast(e.message,true);}}
   async function probePlaytomic(){
-    toast('Verifica del calendario Playtomic dal cloud…');
+    const installed=await window.PBL_CHROME.probe();
+    if(!installed){
+      toast('Estensione Chrome assente. Installarla seguendo le istruzioni del repository.',true);
+      return;
+    }
+    toast('Estensione rilevata. Controllo Playtomic da Chrome…');
     try{
-      const result=await api('testPlaytomicConnection');
-      toast(result.ok?'Playtomic collegato: calendario JSON accessibile.':
-        'Playtomic non verificato: '+result.note,!result.ok);
-      await loadAll();
-    }catch(err){toast(err.message,true);}
+      const result=await window.PBL_CHROME.query({
+        date:romeDate(1),time:'19:00',duration:90,tolerance:60
+      });
+      state.playtomicLive=['available','no_slots'].includes(result.status);
+      toast(result.status==='available'?'Playtomic accessibile da Chrome: slot ottenuti.':
+        'Estensione funzionante: nessuno slot compatibile per il test.');
+      renderClubs();
+    }catch(err){state.playtomicLive=false;toast(err.message,true);renderClubs();}
   }
   async function scheduler(enabled){
     try{const data=await api(enabled?'installScheduler':'removeScheduler');state.schedulerActive=data.installed;schedulerState();toast(enabled?'Trigger di controllo attivato':'Trigger disattivato');}
@@ -198,6 +223,7 @@
     document.querySelectorAll('input[name="jobMode"]').forEach(n=>n.addEventListener('change',()=>{
       $('autoWarning').classList.toggle('hidden',document.querySelector('input[name="jobMode"]:checked').value!=='auto');
     }));
+    document.addEventListener('pbl-chrome-ready',()=>{if(state.clubs.length)renderClubs();});
     document.addEventListener('pbl-backend-connected',loadAll);
     loadAll();
   }
