@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.10 — note personali sui campi.
+ * Padel Booking Leon v1.11 — note personali sui campi.
  * Persistenza nelle User Properties del proprietario (mai su GitHub).
  * I valori sono esplicitamente indicativi/manuali, non prezzi contrattuali.
  */
