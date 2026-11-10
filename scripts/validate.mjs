@@ -29,6 +29,8 @@ assert.equal(JSON.parse(read('chrome-extension/manifest.json')).manifest_version
 assert.match(read('github-pages/index.html'),/chrome-bridge\.js/);
 assert.match(read('github-pages/app.js'),/PBL_CHROME\.query/);
 assert.match(read('github-pages/app.js'),/saveCourtDetails/);
+assert.match(read('github-pages/app.js'),/slot-metadata/);
+assert.match(read('apps-script/WansportExtra.gs'),/pro\[\\s-\]\*green/);
 assert.match(read('github-pages/index.html'),/id="courtDialog"/);
 assert.match(read('apps-script/Bridge.html'),/getCourtDetails/);
 assert.match(read('chrome-extension/background.js'),/credentials:'omit'/);
