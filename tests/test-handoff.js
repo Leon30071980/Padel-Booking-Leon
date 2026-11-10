@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.15 — test percorso Chrome → Wansport, nessun accesso live. */
+/* Padel Booking Leon v1.16 — test percorso Chrome → Wansport, nessun accesso live. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const listeners=[],tabs=[],session=new Map();
 const chrome={runtime:{id:'local-test',lastError:null,onMessage:{addListener(fn){listeners.push(fn);}}},
@@ -62,13 +62,13 @@ let count=0;async function test(name,fn){await fn();count++;console.log('✓ '+n
  });
  await test('La pagina Wansport richiede clic esplicito e non conferma prenotazioni',async()=>{
    const src=fs.readFileSync('chrome-extension/wansport-handoff.js','utf8');
-   assert.match(src,/open\.onclick=\(\)=>/);
-   assert.match(src,/found\.click\(\)/);
+   assert.match(src,/openButton\.onclick=\(\)=>/);
+   assert.match(src,/target\.click\(\)/);
    assert.doesNotMatch(src,/fetch\(|XMLHttpRequest|task=prenotazioni\.(?:save|confirm|book)/i);
    const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-   assert.equal(manifest.version,'1.15.0');
+   assert.equal(manifest.version,'1.16.0');
    assert.deepEqual(manifest.permissions,['storage','tabs']);
    assert.equal(manifest.content_scripts.length,2);
  });
- console.log('Chrome/Wansport handoff v1.15: '+count+' test superati.');
+ console.log('Chrome/Wansport handoff v1.16: '+count+' test superati.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
