@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.13 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.14 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -166,6 +166,7 @@
       ['Orario',slot.start+'–'+slot.end],['Durata',slot.duration+' minuti'],['Prezzo',price]
     ].map(([k,v])=>'<div class="booking-summary-line"><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join('');
     $('bookingOpen').href=club.url;
+    $('bookingOpen').textContent=club.id==='hero'?'Apri Playtomic ↗':'Apri fascia su Wansport ↗';
     $('bookingRecheck').disabled=false;
     bookingStatus('Disponibilità rilevata durante la ricerca, ma non riservata. Ricontrolli prima di procedere.');
     $('bookingDialog').showModal();
@@ -199,6 +200,32 @@
     }catch(e){
       if(serial===bookingCheckSerial)bookingStatus('Impossibile verificare ora: '+e.message,'warning');
     }finally{if(serial===bookingCheckSerial)button.disabled=false;}
+  }
+  async function bookingOpenPortal(event){
+    if(!bookingSelection)return;
+    const {club,slot}=bookingSelection;
+    if(club.platform!=='Wansport'){
+      // Playtomic: link ufficiale, come in v1.13.
+      return;
+    }
+    // Chrome richiede un'azione esplicita dell'utente; non si procede in background.
+    if(!window.PBL_CHROME?.handoff)return;
+    event.preventDefault();
+    const button=$('bookingOpen');
+    button.textContent='Apertura…';
+    try{
+      await window.PBL_CHROME.handoff({
+        club_id:club.id,court_id:String(slot.court_id),tslot_id:String(slot.tslot_id||''),
+        court:slot.court,date:slot.date,start:slot.start,end:slot.end,
+        duration:Number(slot.duration),price:String(slot.quotePrice||slot.price||'')
+      });
+      toast('Wansport aperto: la guida del campo è visibile sulla nuova scheda.');
+    }catch(err){
+      toast('Estensione non aggiornata: apertura del sito ufficiale.',true);
+      window.open(club.url,'_blank','noopener,noreferrer');
+    }finally{
+      button.textContent='Apri fascia su Wansport ↗';
+    }
   }
   async function bookingCopy(){
     const content=bookingText();
@@ -421,6 +448,7 @@
     $('wansportForm').addEventListener('submit',saveAndTestWansport);$('wansportDelete').addEventListener('click',removeWansport);
     $('courtForm').addEventListener('submit',saveCourt);
     $('bookingCopy').addEventListener('click',bookingCopy);
+    $('bookingOpen').addEventListener('click',bookingOpenPortal);
     $('bookingRecheck').addEventListener('click',bookingRecheck);
     $('clubForm').addEventListener('submit',saveClub);$('editRule').addEventListener('change',changeRule);
     ['jobDate','jobTime','jobClubChoices'].forEach(id=>$(id).addEventListener('change',previewOpening));
