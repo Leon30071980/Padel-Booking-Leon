@@ -23,7 +23,7 @@ for(const value of [
 assert.ok(script.includes('event.origin') && script.includes('msg.nonce!==nonce'));
 assert.ok(script.includes('allowedActions.has(action)'));
 assert.ok(fs.readFileSync('apps-script/Bridge.html','utf8').includes('event.source!==window.top'));
-// v1.15: il pannello rimane disponibile, ma si richiude automaticamente con connessione valida.
+// v1.16: il pannello rimane disponibile, ma si richiude automaticamente con connessione valida.
 const html=fs.readFileSync('github-pages/index.html','utf8');
 const css=fs.readFileSync('github-pages/styles.css','utf8');
 assert.match(html,/id="backendSettingsBtn"/);
@@ -32,4 +32,4 @@ assert.match(css,/\.github-connect\[hidden\]\s*\{display:none!important\}/);
 assert.match(script,/function panelVisible\(open\)/);
 assert.match(script,/panelVisible\(!ready\)/);
 assert.match(script,/\$\('backendSettingsBtn'\)\.addEventListener\('click'/);
-console.log('Ponte v1.15: sicurezza, pannello compatto e pulsante impostazioni OK.');
+console.log('Ponte v1.16: sicurezza, pannello compatto e pulsante impostazioni OK.');
