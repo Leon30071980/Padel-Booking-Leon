@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.5 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.6 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G da validare.
  */
-const PBL_VERSION = 'v1.5';
+const PBL_VERSION = 'v1.6';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -257,7 +257,7 @@ function searchClubAvailability_(id,request){
     reason:'Playtomic non collegato. Aprire il portale per verificare la disponibilità.'};
 }
 /**
- * v1.5: controllo una tantum ALL'APERTURA TEORICA, non monitoraggio continuo.
+ * v1.6: controllo una tantum ALL'APERTURA TEORICA, non monitoraggio continuo.
  * Trigger a minuto non preciso; nessun addebito o prenotazione.
  * Esegue al massimo 3 ricerche live per tick per rispettare limiti Apps Script.
  */
