@@ -3,6 +3,12 @@ name: Publish Google Apps Script
 # L'automatismo su main si abilita impostando AUTO_DEPLOY_ENABLED=true in GitHub Variables.
 on:
   workflow_dispatch:
+    inputs:
+      upload_only:
+        description: 'Solo carica codice nel progetto Google (senza aggiornare deployment)'
+        type: boolean
+        required: true
+        default: true
   push:
     branches: [main]
     paths:
@@ -33,10 +39,13 @@ jobs:
           APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
           APPS_SCRIPT_DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          SOURCE_ONLY: ${{ inputs.upload_only }}
         run: |
           test -n "$APPS_SCRIPT_ID" || { echo 'Missing APPS_SCRIPT_ID'; exit 1; }
-          test -n "$APPS_SCRIPT_DEPLOYMENT_ID" || { echo 'Missing APPS_SCRIPT_DEPLOYMENT_ID'; exit 1; }
           test -n "$CLASPRC_JSON" || { echo 'Missing CLASPRC_JSON'; exit 1; }
+          if [ "$SOURCE_ONLY" != 'true' ]; then
+            test -n "$APPS_SCRIPT_DEPLOYMENT_ID" || { echo 'Missing APPS_SCRIPT_DEPLOYMENT_ID'; exit 1; }
+          fi
       - name: Create local clasp configuration
         env:
           APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
@@ -53,6 +62,7 @@ jobs:
           fs.writeFileSync('.clasp.json',JSON.stringify({scriptId:id,rootDir:'apps-script'}));
           NODE
       - name: Require verified Web App deployment
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.upload_only }}
         env:
           WEBAPP_VERIFIED: ${{ vars.APPS_SCRIPT_WEBAPP_VERIFIED }}
         run: |
@@ -62,12 +72,46 @@ jobs:
             echo 'Poi impostare APPS_SCRIPT_WEBAPP_VERIFIED=true nelle variabili GitHub Actions.'
             exit 1
           fi
+      - name: Verify app manifest and protect remote-only files
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const manifest=JSON.parse(fs.readFileSync('apps-script/appsscript.json','utf8'));
+          if (manifest.webapp?.access!=='MYSELF' || manifest.webapp?.executeAs!=='USER_DEPLOYING')
+            throw Error('Manifest must restrict the web app to its deploying owner');
+          NODE
+          REMOTE_DIR="$(mktemp -d)"
+          export REMOTE_DIR
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const {scriptId}=JSON.parse(fs.readFileSync('.clasp.json','utf8'));
+          fs.mkdirSync(path.join(process.env.REMOTE_DIR,'apps-script'),{recursive:true});
+          fs.writeFileSync(path.join(process.env.REMOTE_DIR,'.clasp.json'),JSON.stringify({scriptId,rootDir:'apps-script'}));
+          NODE
+          (cd "$REMOTE_DIR" && npx --yes @google/clasp@3.4.1 pull)
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const path=require('node:path');
+          const names=dir=>fs.readdirSync(dir,{withFileTypes:true})
+            .filter(e=>e.isFile() && /\.(gs|html|json)$/i.test(e.name)).map(e=>e.name);
+          const remote=names(path.join(process.env.REMOTE_DIR,'apps-script'));
+          const local=new Set(names('apps-script'));
+          if(!remote.length)throw Error('Remote project is empty. Aborting source synchronization.');
+          const extras=remote.filter(f=>!local.has(f));
+          if(extras.length)throw Error('Remote-only files: '+extras.join(', ')+'. Import them into GitHub before deploying.');
+          console.log('Safe file inventory: '+remote.length+' remote files verified.');
+          NODE
       - name: Push versioned code to existing script
         run: npx --yes @google/clasp@3.4.1 push --force
       - name: Update existing web app deployment
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.upload_only }}
         env:
           DEPLOYMENT_ID: ${{ secrets.APPS_SCRIPT_DEPLOYMENT_ID }}
         run: |
           # Updating an existing deployment preserves its web app URL and access settings.
           npx --yes @google/clasp@3.4.1 update-deployment "$DEPLOYMENT_ID" --description 'Padel Booking Leon v1.5' >/dev/null
           echo 'Web app deployment updated to v1.5.'
+      - name: Source-only upload completed
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_only }}
+        run: echo 'Code uploaded to the existing project. No deployment was updated. Create a new private Web App from the Apps Script editor.'
