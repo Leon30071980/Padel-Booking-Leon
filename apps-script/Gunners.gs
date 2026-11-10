@@ -148,6 +148,15 @@ function gunnersMinutes_(text){
   const h=Number(m[1]),n=Number(m[2]);
   return h>=0&&h<=24&&n<60&&(h<24||n===0)?h*60+n:NaN;
 }
+function pblTslotId_(slot){
+  if(!slot || typeof slot!=='object')return '';
+  for(const key of ['tslotId','tslot_id','idTslot','ts_id','id']){
+    const raw=slot[key];
+    if(/^[1-9]\d{0,11}$/.test(String(raw??'')))return String(raw);
+  }
+  return '';
+}
+
 function gunnersSlots_(data,day,preferred,duration,tolerance){
   const target=gunnersMinutes_(preferred);
   const result=[];
