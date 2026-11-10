@@ -146,7 +146,7 @@
       'Campo: '+slot.court,'Località: '+location,'Copertura: '+cover,
       'Data: '+slot.date,'Orario: '+slot.start+'–'+slot.end,
       'Durata: '+slot.duration+' minuti','Prezzo: '+price,
-      'Portale: '+club.url,'La prenotazione NON è stata effettuata.'].join('\\n');
+      'Portale: '+club.url,'La prenotazione NON è stata effettuata.'].join('\n');
   }
   function openBooking(clubId,courtId,start){
     const slot=getBookingSlot(clubId,courtId,start);
