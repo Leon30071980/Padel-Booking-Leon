@@ -2,10 +2,10 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const read = (path) => fs.readFileSync(path, 'utf8');
-const files=['Code.gs','Gunners.gs','WansportExtra.gs','Index.html','Styles.html','Client.html','Bridge.html','appsscript.json'];
+const files=['Code.gs','Gunners.gs','WansportExtra.gs','Playtomic.gs','Index.html','Styles.html','Client.html','Bridge.html','appsscript.json'];
 for (const f of files) assert.ok(fs.statSync('apps-script/'+f).size>20, f+' assente o vuoto');
 const code=read('apps-script/Code.gs');
-assert.match(code,/PBL_VERSION\s*=\s*'v1\.6'/);
+assert.match(code,/PBL_VERSION\s*=\s*'v1\.7'/);
 assert.match(read('github-pages/index.html'),/v1\.6/);
 assert.match(read('apps-script/Client.html'),/v1\.6/);
 assert.match(read('apps-script/Index.html'),/v1\.6/);
@@ -23,9 +23,11 @@ assert.match(read('apps-script/Bridge.html'),/event\.origin!==ORIGIN/);
 assert.ok(code.includes('getDashboard'));
 assert.ok(read('apps-script/Gunners.gs').includes('getPannelloPrenotazioni'));
 assert.ok(read('apps-script/WansportExtra.gs').includes('Wansport'));
+assert.ok(read('apps-script/Playtomic.gs').includes('playtomic.com/api/clubs/availability'));
+assert.match(code,/searchPlaytomic_\(request\)/);
 for (const f of files) {
  const content=read('apps-script/'+f);
  assert.doesNotMatch(content,/-----BEGIN (?:RSA|OPENSSH|EC|PRIVATE) KEY-----/);
  assert.doesNotMatch(content,/ghp_[A-Za-z0-9]{20,}/);
 }
-console.log('v1.6: 8 file Apps Script, manifest, versione e verifiche di base OK.');
+console.log('v1.7: 9 file Apps Script, manifest, versione e verifiche di base OK.');
