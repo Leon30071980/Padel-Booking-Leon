@@ -166,6 +166,7 @@
       ['Orario',slot.start+'–'+slot.end],['Durata',slot.duration+' minuti'],['Prezzo',price]
     ].map(([k,v])=>'<div class="booking-summary-line"><span>'+esc(k)+'</span><strong>'+esc(v)+'</strong></div>').join('');
     $('bookingOpen').href=club.url;
+    $('bookingOpen').dataset.handoffFailed='';
     $('bookingOpen').textContent=club.id==='hero'?'Apri Playtomic ↗':'Apri fascia su Wansport ↗';
     $('bookingRecheck').disabled=false;
     bookingStatus('Disponibilità rilevata durante la ricerca, ma non riservata. Ricontrolli prima di procedere.');
@@ -201,6 +202,7 @@
       if(serial===bookingCheckSerial)bookingStatus('Impossibile verificare ora: '+e.message,'warning');
     }finally{if(serial===bookingCheckSerial)button.disabled=false;}
   }
+  function buttonHandoffFailed(){return $('bookingOpen').dataset.handoffFailed==='1';}
   async function bookingOpenPortal(event){
     if(!bookingSelection)return;
     const {club,slot}=bookingSelection;
@@ -209,6 +211,7 @@
       return;
     }
     // Chrome richiede un'azione esplicita dell'utente; non si procede in background.
+    if(buttonHandoffFailed())return;
     if(!window.PBL_CHROME?.handoff||!window.PBL_CHROME.installed())return;
     event.preventDefault();
     const button=$('bookingOpen');
@@ -225,6 +228,7 @@
       toast('Guida Wansport: '+reason,true);
       bookingStatus('Impossibile aprire la guida: '+reason+'. In alternativa utilizzi il sito ufficiale.', 'warning');
       button.href=club.url;
+      button.dataset.handoffFailed='1';
       button.textContent='Apri portale ufficiale ↗';
     }finally{
       if(button.textContent==='Apertura…')button.textContent='Apri fascia su Wansport ↗';
