@@ -1,5 +1,5 @@
 <script>
-/* Padel Booking Leon — v1.6 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.7 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -35,12 +35,12 @@
     $('clubGrid').innerHTML=state.clubs.map(c=>{
       const connected=c.connector.ready, configured=c.connector.configured;
       const isWS=c.platform==='Wansport';
-      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):'Non collegato al calendario';
+      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):connected?'Calendario Playtomic verificato':'Verifica disponibilità Playtomic necessaria';
       return `<article class="club-card"><div class="club-top"><span class="platform-tag">${esc(c.platform)}</span><span class="club-priority">PRIORITÀ ${c.priority}</span></div>
       <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
       <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
       <div class="club-actions"><button type="button" class="btn btn-outline" data-edit-club="${esc(c.id)}">⚙ Regole</button><a class="btn btn-outline" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">↗ Sito</a></div>
-      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-probe="'+esc(c.id)+'">Verifica pagina pubblica</button>'}</article>`;
+      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">🔎 Verifica Playtomic</button>'}</article>`;
     }).join('');
     choices('searchClubChoices');choices('jobClubChoices');
   }
@@ -88,7 +88,7 @@
         const club=state.clubs.find(c=>c.id===r.club_id);
         const found=r.status==='available';
         const status={available:'Slot compatibili',no_slots:'Nessuno slot',outside_window:'Fuori finestra',auth_required:'Accesso richiesto',error:'Da verificare',not_configured:'Non collegato'}[r.status]||'Da verificare';
-        const slots=(r.slots||[]).map(s=>`<div class="slot-line"><strong>${esc(s.court)}</strong><span>${esc(s.start)}–${esc(s.end)}</span><a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer">Apri portale ↗</a></div>`).join('');
+        const slots=(r.slots||[]).map(s=>`<div class="slot-line"><strong>${esc(s.court)}</strong><span>${esc(s.start)}–${esc(s.end)}${s.price?' · '+esc(s.price):''}</span><a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer">Apri portale ↗</a></div>`).join('');
         return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
           <small>${esc(r.reason)}</small>${slots?'<div class="slot-list">'+slots+'</div>':''}
           ${!found?`<a target="_blank" rel="noopener noreferrer" href="${esc(club?.url||'#')}">Apri il portale ↗</a>`:''}</div><span class="result-tag">${esc(status)}</span></div>`;
@@ -133,6 +133,15 @@
   async function probe(id){toast('Controllo della sola pagina pubblica…');try{const data=await api('checkPublicPortal',id);
       toast(data.reachable?`Portale raggiungibile (HTTP ${data.http_status}); calendario non verificato.`:data.note,!data.reachable);
     }catch(e){toast(e.message,true);}}
+  async function probePlaytomic(){
+    toast('Verifica del calendario Playtomic dal cloud…');
+    try{
+      const result=await api('testPlaytomicConnection');
+      toast(result.ok?'Playtomic collegato: calendario JSON accessibile.':
+        'Playtomic non verificato: '+result.note,!result.ok);
+      await loadAll();
+    }catch(err){toast(err.message,true);}
+  }
   async function scheduler(enabled){
     try{const data=await api(enabled?'installScheduler':'removeScheduler');state.schedulerActive=data.installed;schedulerState();toast(enabled?'Trigger di controllo attivato':'Trigger disattivato');}
     catch(e){toast(e.message,true);}
@@ -180,11 +189,12 @@
     $('schedulerBtn').addEventListener('click',()=>{$('schedulerDialog').showModal();schedulerState();});
     $('enableScheduler').addEventListener('click',()=>scheduler(true));$('disableScheduler').addEventListener('click',()=>scheduler(false));
     $('refreshBtn').addEventListener('click',loadAll);
-    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-close]');if(!t)return;
+    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
       if(t.dataset.editClub)editClub(t.dataset.editClub);
       if(t.dataset.detail)detail(t.dataset.detail);
       if(t.dataset.cancel)cancel(t.dataset.cancel);
       if(t.dataset.probe)probe(t.dataset.probe);
+      if(t.dataset.playtomicTest)probePlaytomic();
       if(t.dataset.connectWansport)showWansport(t.dataset.connectWansport);
       if(t.dataset.close)$(t.dataset.close).close();
     });
