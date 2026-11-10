@@ -6,9 +6,9 @@ const files=['Code.gs','Gunners.gs','WansportExtra.gs','Playtomic.gs','Index.htm
 for (const f of files) assert.ok(fs.statSync('apps-script/'+f).size>20, f+' assente o vuoto');
 const code=read('apps-script/Code.gs');
 assert.match(code,/PBL_VERSION\s*=\s*'v1\.7'/);
-assert.match(read('github-pages/index.html'),/v1\.6/);
-assert.match(read('apps-script/Client.html'),/v1\.6/);
-assert.match(read('apps-script/Index.html'),/v1\.6/);
+assert.match(read('github-pages/index.html'),/v1\.7/);
+assert.match(read('apps-script/Client.html'),/v1\.7/);
+assert.match(read('apps-script/Index.html'),/v1\.7/);
 const manifest=JSON.parse(read('apps-script/appsscript.json'));
 assert.equal(manifest.timeZone,'Europe/Rome');
 assert.equal(manifest.runtimeVersion,'V8');
