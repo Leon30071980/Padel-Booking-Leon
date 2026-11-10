@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.11 — unit tests extension MV3, senza rete o sessioni. */
+/* Padel Booking Leon v1.12 — unit tests extension MV3, senza rete o sessioni. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
 assert.equal(manifest.manifest_version,3);
