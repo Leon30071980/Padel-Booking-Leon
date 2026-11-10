@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.9 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.10 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -100,14 +100,17 @@
         const roof=cover==='indoor'?'Coperto':cover==='outdoor'?'Scoperto':'Copertura da verificare';
         const price=s.price?String(s.price):note?.price?String(note.price).replace(/\s?€$/,'')+' €':'Da verificare';
         const origin=s.price?'Prezzo portale':note?.price?'Prezzo indicativo · nota personale':'Prezzo non disponibile';
-        return `<div class="slot-line"><div><strong>${esc(s.court)}</strong><div class="slot-details">
-              <span>📍 ${esc(location)}</span><span>${esc(roof)}</span></div></div>
-          <span>${esc(s.start)}–${esc(s.end)}</span>
-          <div class="slot-details"><span class="slot-price">${esc(price)}</span><span>${esc(origin)}</span></div>
+        return `<div class="slot-line">
+          <div class="slot-heading"><strong>${esc(s.court)}</strong><span class="slot-time">${esc(s.start)}–${esc(s.end)}</span></div>
+          <div class="slot-metadata">
+            <span class="slot-chip">📍 ${esc(location)}</span>
+            <span class="slot-chip">${esc(roof)}</span>
+            <span class="slot-chip"><strong class="slot-price">${esc(price)}</strong> <small>${esc(origin)}</small></span>
+          </div>
           <div class="slot-controls">
-            <button type="button" data-edit-court="${esc(s.court_id)}" data-court-club="${esc(r.club_id)}">Dettagli</button>
+            <button type="button" data-edit-court="${esc(s.court_id)}" data-court-club="${esc(r.club_id)}">⚙ Dettagli</button>
             <a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer"
-               title="Apre il portale ufficiale: selezionare e confermare qui il campo">Prenota sul sito ↗</a>
+              title="Apre il portale ufficiale: selezionare e confermare qui il campo">Prenota sul sito ↗</a>
           </div></div>`;
       }).join('');
       return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
