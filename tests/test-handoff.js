@@ -1,11 +1,12 @@
-/* Padel Booking Leon v1.14 — test percorso Chrome → Wansport, nessun accesso live. */
+/* Padel Booking Leon v1.15 — test percorso Chrome → Wansport, nessun accesso live. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const listeners=[],tabs=[],session=new Map();
 const chrome={runtime:{id:'local-test',lastError:null,onMessage:{addListener(fn){listeners.push(fn);}}},
-  tabs:{create({url,active},callback){const tab={id:101,url,active};tabs.push(tab);callback(tab);}},
+  tabs:{create({url,active},callback){const tab={id:101,url,active};tabs.push(tab);callback(tab);},
+    async update(id,{url}){const tab=tabs.find(t=>t.id===id);if(!session.has('pbl_wshandoff_'+id))throw Error('Navigated before storage');tab.updated_url=url;}},
   storage:{session:{
     async set(values){for(const [k,v] of Object.entries(values))session.set(k,v);},
-    async get(key){return {[key]:session.get(key)};}
+    async get(key){return {[key]:session.get(key)};},async remove(key){session.delete(key);}
   }}};
 const context=vm.createContext({chrome,URL,Date,Set,Map,Object,String,Number,Array,Math,JSON,Error,
   AbortSignal,fetch:async()=>({ok:true,status:200,json:async()=>[]})});
@@ -30,7 +31,8 @@ let count=0;async function test(name,fn){await fn();count++;console.log('✓ '+n
  await test('Chrome apre solo il portale ufficiale con dati separati per scheda',async()=>{
    const response=await message('handoff',selection,originSender);
    assert.equal(response.ok,true);assert.equal(tabs.length,1);
-   assert.equal(tabs[0].url,'https://propadelclub.wansport.com/start');
+   assert.equal(tabs[0].url,'about:blank');
+   assert.equal(tabs[0].updated_url,'https://propadelclub.wansport.com/start');
    assert.equal(tabs[0].active,true);
    const saved=session.get('pbl_wshandoff_101');
    assert.equal(saved.court,'Campo N. 4 - PRO GREEN');
@@ -38,7 +40,7 @@ let count=0;async function test(name,fn){await fn();count++;console.log('✓ '+n
    assert.ok(!('password' in saved)&&!('cookie' in saved));
  });
  await test('Pagina Wansport recupera solo la propria scheda',async()=>{
-   const response=await message('getHandoff',null,{tab:{id:101},url:tabs[0].url});
+   const response=await message('getHandoff',null,{tab:{id:101},url:tabs[0].updated_url});
    assert.equal(response.ok,true);
    assert.equal(response.data.date,'2026-11-17');
  });
@@ -64,9 +66,9 @@ let count=0;async function test(name,fn){await fn();count++;console.log('✓ '+n
    assert.match(src,/found\.click\(\)/);
    assert.doesNotMatch(src,/fetch\(|XMLHttpRequest|task=prenotazioni\.(?:save|confirm|book)/i);
    const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-   assert.equal(manifest.version,'1.14.0');
+   assert.equal(manifest.version,'1.15.0');
    assert.deepEqual(manifest.permissions,['storage','tabs']);
    assert.equal(manifest.content_scripts.length,2);
  });
- console.log('Chrome/Wansport handoff v1.14: '+count+' test superati.');
+ console.log('Chrome/Wansport handoff v1.15: '+count+' test superati.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
