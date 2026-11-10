@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.10 — test annotazioni private per campo */
+/* Padel Booking Leon v1.11 — test annotazioni private per campo */
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
 const props=new Map();
 const ctx=vm.createContext({JSON,Number,String,Object,Array,Error,RegExp,Map,Set,
