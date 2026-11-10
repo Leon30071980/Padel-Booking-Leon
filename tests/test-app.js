@@ -72,10 +72,13 @@ test('Finestra mobile in ore è durata reale',()=>{
   assert.equal(run(`getOpeningPreview('2026-11-17','20:00').find(c=>c.club_id==='pro').opening_at`),'2026-11-10T19:00:00.000Z');
 });
 test('Richiesta salvata, duplicati bloccati',()=>{
-  const req=`{date:'2099-11-17',time:'20:00',duration:90,tolerance:30,mode:'notify',clubs:['gunners','pro','hero']}`;
+  const req=`{date:'2099-11-17',time:'20:00',duration:90,tolerance:30,mode:'notify',clubs:['gunners','pro']}`;
   const created=run(`createRequest(${req})`);assert.ok(created.ok);
   assert.equal(run('getDashboard()').jobs.length,1);
   assert.throws(()=>run(`createRequest(${req})`),/Esiste già/);
+});
+test('Padel Hero non puo essere programmato dal cloud Google',()=>{
+  assert.throws(()=>run(`createRequest({date:'2099-11-17',time:'19:00',duration:90,tolerance:0,clubs:['hero']})`),/Chrome aperto/);
 });
 test('Trigger idempotente e disattivabile',()=>{
   run('installScheduler()');run('installScheduler()');assert.equal(triggers.length,1);run('removeScheduler()');assert.equal(triggers.length,0);
