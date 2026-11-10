@@ -3,7 +3,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
 assert.equal(manifest.manifest_version,3);
 assert.deepEqual(manifest.host_permissions,['https://playtomic.com/*']);
-assert.equal(manifest.content_scripts.length,1);
+assert.equal(manifest.content_scripts.length,2);
+assert.ok(manifest.content_scripts.some(s=>s.js.includes('wansport-handoff.js')));
 assert.ok(manifest.content_scripts[0].matches[0].includes('Padel-Booking-Leon'));
 const source=fs.readFileSync('chrome-extension/background.js','utf8');
 const listener={};let status=200,body=[],fetchCalls=[];
