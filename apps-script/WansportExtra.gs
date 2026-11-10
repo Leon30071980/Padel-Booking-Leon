@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.10 — Wansport multi-club (Pro Padel Club e Punto G).
+ * Padel Booking Leon v1.11 — Wansport multi-club (Pro Padel Club e Punto G).
  * Connettore sperimentale SOLO LETTURA. Non invia richieste di prenotazione.
  * Gunners.gs resta invariato e continua a gestire il club Gunners.
  * Non inserire credenziali o cookie nel codice o nei log.
@@ -101,11 +101,11 @@ function extraSession_(id){
   } else if(code!==200)throw Error('Login non accettato da Wansport (HTTP '+code+').');
   return cookies;
 }
-function extraCalendar_(id,day){
+function extraCalendar_(id,day,sessionCookies){
   dateCheck_(day);
   const cfg=extraConfig_(id),p=PropertiesService.getUserProperties();
   const sportId=Number(p.getProperty(extraProp_(id,'SPORT_ID'))||15);
-  const cookies=extraSession_(id);
+  const cookies=sessionCookies||extraSession_(id);
   const path='/index.php?option=com_wansport&task=prenotazioni.getPannelloPrenotazioni&format=raw'
     +'&filtroData='+encodeURIComponent(day)+'&filtroSport='+encodeURIComponent(sportId)+'&isWannaplay=0';
   const response=extraFetch_(id,path,cookies,{headers:{Accept:'application/json, text/javascript, */*; q=0.01',
