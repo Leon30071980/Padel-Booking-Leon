@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.11 — Wansport multi-club (Pro Padel Club e Punto G).
+ * Padel Booking Leon v1.12 — Wansport multi-club (Pro Padel Club e Punto G).
  * Connettore sperimentale SOLO LETTURA. Non invia richieste di prenotazione.
  * Gunners.gs resta invariato e continua a gestire il club Gunners.
  * Non inserire credenziali o cookie nel codice o nei log.
