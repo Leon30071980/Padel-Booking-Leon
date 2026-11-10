@@ -13,7 +13,7 @@
     'getDashboard','getOpeningPreview','searchAvailability','createRequest',
     'saveClubRule','getRequestDetail','cancelRequest','checkPublicPortal',
     'installScheduler','removeScheduler','saveWansportCredentials',
-    'testWansportConnection','deleteWansportCredentials','testPlaytomicConnection'
+    'testWansportConnection','deleteWansportCredentials','testPlaytomicConnection','getCourtDetails','saveCourtDetails'
   ]);
   function send(kind,body){
     window.top.postMessage(Object.assign({channel:CHANNEL,nonce:NONCE,kind:kind},body||{}),ORIGIN);
@@ -39,7 +39,7 @@
       runner[msg.action].apply(runner,msg.args);
     }catch(error){send('result',{id:msg.id,ok:false,error:String(error&&error.message||error).slice(0,600)});}
   });
-  send('ready',{version:'v1.8'});
+  send('ready',{version:'v1.9'});
 })();
 </script>
 </body>

@@ -1,10 +1,10 @@
 
-/* Padel Booking Leon — v1.8 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.9 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
   const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false};
+  const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false,courtDetails:new Map(),lastResults:[]};
   let toastTimer;
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
@@ -79,6 +79,66 @@
       $('openingPreview').innerHTML=data.filter(r=>ids.includes(r.club_id)).map(r=>`<div><strong>${esc(state.clubs.find(c=>c.id===r.club_id)?.name||r.club_id)}:</strong> ${r.opening_at?esc(prettyStamp(r.opening_at)):'Regola non configurata'}</div>`).join('')||'Selezioni almeno un centro.';
     }catch(e){$('openingPreview').textContent=e.message;}
   }
+  function detailKey(clubId,courtId){return String(clubId)+':'+String(courtId);}
+  function courtLocation(s,id,note){
+    if(note?.location)return note.location;
+    if(s.location)return s.location;
+    if(id==='hero')return 'San Prospero';
+    if(id==='pro')return /vigatto/i.test(s.venue||'')?'Vigatto':/parma/i.test(s.venue||'')?'Parma':'Parma / Vigatto · sede da verificare';
+    return 'Parma';
+  }
+  function renderResults(){
+    $('searchResults').innerHTML=state.lastResults.map(r=>{
+      const club=state.clubs.find(c=>c.id===r.club_id);
+      const found=r.status==='available';
+      const status={available:'Slot compatibili',no_slots:'Nessuno slot',outside_window:'Fuori finestra',
+        auth_required:'Accesso richiesto',error:'Da verificare',not_configured:'Non collegato'}[r.status]||'Da verificare';
+      const slots=(r.slots||[]).map(s=>{
+        const note=state.courtDetails.get(detailKey(r.club_id,s.court_id));
+        const location=courtLocation(s,r.club_id,note);
+        const cover=note?.cover&&note.cover!=='unknown'?note.cover:(s.cover||'unknown');
+        const roof=cover==='indoor'?'Coperto':cover==='outdoor'?'Scoperto':'Copertura da verificare';
+        const price=s.price?String(s.price):note?.price?String(note.price).replace(/\s?€$/,'')+' €':'Da verificare';
+        const origin=s.price?'Prezzo portale':note?.price?'Prezzo indicativo · nota personale':'Prezzo non disponibile';
+        return `<div class="slot-line"><div><strong>${esc(s.court)}</strong><div class="slot-details">
+              <span>📍 ${esc(location)}</span><span>${esc(roof)}</span></div></div>
+          <span>${esc(s.start)}–${esc(s.end)}</span>
+          <div class="slot-details"><span class="slot-price">${esc(price)}</span><span>${esc(origin)}</span></div>
+          <div class="slot-controls">
+            <button type="button" data-edit-court="${esc(s.court_id)}" data-court-club="${esc(r.club_id)}">Dettagli</button>
+            <a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer"
+               title="Apre il portale ufficiale: selezionare e confermare qui il campo">Prenota sul sito ↗</a>
+          </div></div>`;
+      }).join('');
+      return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
+        <small>${esc(r.reason)}</small>${slots?'<div class="slot-list">'+slots+'</div>':''}
+        ${!found?`<a target="_blank" rel="noopener noreferrer" href="${esc(club?.url||'#')}">Apri il portale ↗</a>`:''}
+        </div><span class="result-tag">${esc(status)}</span></div>`;
+    }).join('');
+  }
+  function openCourtDetails(clubId,courtId){
+    const r=state.lastResults.find(x=>x.club_id===clubId);
+    const slot=r?.slots?.find(x=>String(x.court_id)===String(courtId));
+    if(!slot)return;
+    const note=state.courtDetails.get(detailKey(clubId,courtId));
+    $('courtClubId').value=clubId;$('courtResourceId').value=courtId;$('courtDuration').value=String(slot.duration);
+    $('courtDialogTitle').textContent=slot.court;
+    $('courtLocation').value=note?.location||courtLocation(slot,clubId,null);
+    $('courtCover').value=note?.cover||'unknown';
+    $('courtPrice').value=note?.price||'';
+    $('courtDialog').showModal();
+  }
+  async function saveCourt(e){
+    e.preventDefault();
+    const data={club_id:$('courtClubId').value,court_id:$('courtResourceId').value,
+      location:$('courtLocation').value,cover:$('courtCover').value,price:$('courtPrice').value,
+      duration:Number($('courtDuration').value)};
+    try{
+      const response=await api('saveCourtDetails',data);
+      state.courtDetails.set(detailKey(data.club_id,data.court_id),response);
+      $('courtDialog').close();renderResults();toast('Dettagli campo salvati nelle impostazioni private.');
+    }catch(err){toast(err.message,true);}
+  }
   async function search(e){
     e.preventDefault();const clubs=selected('searchClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
     const btn=$('searchBtn');btn.disabled=true;$('searchResults').textContent='Controllo dei calendari abilitati…';
@@ -98,15 +158,14 @@
       const hero=heroResults.find(r=>r&&r.club_id==='hero');
       const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
       if(clubs.includes('hero'))renderClubs();
-      $('searchResults').innerHTML=results.map(r=>{
-        const club=state.clubs.find(c=>c.id===r.club_id);
-        const found=r.status==='available';
-        const status={available:'Slot compatibili',no_slots:'Nessuno slot',outside_window:'Fuori finestra',auth_required:'Accesso richiesto',error:'Da verificare',not_configured:'Non collegato'}[r.status]||'Da verificare';
-        const slots=(r.slots||[]).map(s=>`<div class="slot-line"><strong>${esc(s.court)}</strong><span>${esc(s.start)}–${esc(s.end)}${s.price?' · '+esc(s.price):''}</span><a href="${esc(club?.url||'#')}" target="_blank" rel="noopener noreferrer">Apri portale ↗</a></div>`).join('');
-        return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
-          <small>${esc(r.reason)}</small>${slots?'<div class="slot-list">'+slots+'</div>':''}
-          ${!found?`<a target="_blank" rel="noopener noreferrer" href="${esc(club?.url||'#')}">Apri il portale ↗</a>`:''}</div><span class="result-tag">${esc(status)}</span></div>`;
-      }).join('');
+      state.lastResults=results;
+      const keys=results.flatMap(r=>(r.slots||[]).map(slot=>({club_id:r.club_id,court_id:String(slot.court_id),duration:Number(slot.duration)})));
+      const uniqueKeys=[...new Map(keys.map(k=>[detailKey(k.club_id,k.court_id),k])).values()];
+      try{
+        const notes=uniqueKeys.length?await api('getCourtDetails',uniqueKeys):[];
+        state.courtDetails=new Map(notes.map(n=>[detailKey(n.club_id,n.court_id),n]));
+      }catch(err){state.courtDetails=new Map();toast('Annotazioni campi non caricate: '+err.message,true);}
+      renderResults();
       // Aggiorna gli stati dei collegamenti Wansport senza duplicare le richieste HTTP.
       if(clubs.some(id=>['gunners','pro','puntog'].includes(id)))await loadAll();
     }catch(e){toast(e.message,true);$('searchResults').textContent=e.message;}finally{btn.disabled=false;btn.textContent='⌕ Verifica disponibilità';}
@@ -206,13 +265,15 @@
     const date=romeDate(7);['searchDate','jobDate'].forEach(id=>{$(id).min=romeDate();$(id).value=date;});clock();setInterval(clock,1000);
     $('searchForm').addEventListener('submit',search);$('jobForm').addEventListener('submit',saveRequest);
     $('wansportForm').addEventListener('submit',saveAndTestWansport);$('wansportDelete').addEventListener('click',removeWansport);
+    $('courtForm').addEventListener('submit',saveCourt);
     $('clubForm').addEventListener('submit',saveClub);$('editRule').addEventListener('change',changeRule);
     ['jobDate','jobTime','jobClubChoices'].forEach(id=>$(id).addEventListener('change',previewOpening));
     $('schedulerBtn').addEventListener('click',()=>{$('schedulerDialog').showModal();schedulerState();});
     $('enableScheduler').addEventListener('click',()=>scheduler(true));$('disableScheduler').addEventListener('click',()=>scheduler(false));
     $('refreshBtn').addEventListener('click',loadAll);
-    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
+    document.addEventListener('click',e=>{const t=e.target.closest('[data-edit-club],[data-edit-court],[data-detail],[data-cancel],[data-probe],[data-connect-wansport],[data-playtomic-test],[data-close]');if(!t)return;
       if(t.dataset.editClub)editClub(t.dataset.editClub);
+      if(t.dataset.editCourt)openCourtDetails(t.dataset.courtClub,t.dataset.editCourt);
       if(t.dataset.detail)detail(t.dataset.detail);
       if(t.dataset.cancel)cancel(t.dataset.cancel);
       if(t.dataset.probe)probe(t.dataset.probe);

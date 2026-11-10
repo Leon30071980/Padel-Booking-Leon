@@ -23,3 +23,13 @@
 .github-connect[hidden]{display:none!important}
 .backend-settings-button{padding:8px 11px!important;white-space:nowrap;font-size:12px!important;border:1px solid #3c594b!important}
 @media(max-width:600px){.backend-settings-button span{display:none}.backend-settings-button{padding:8px!important}}
+
+/* v1.9: anteprima compatta, dati di provenienza esplicita */
+.slot-line{display:grid;grid-template-columns:minmax(110px,1.2fr) minmax(80px,.85fr) minmax(100px,1.1fr) auto;gap:9px;align-items:center}
+.slot-details{font-size:11px;line-height:1.5;color:var(--muted);display:flex;flex-direction:column}
+.slot-line .slot-price{font-weight:700;color:var(--lime);font-size:12px}
+.slot-controls{display:flex;gap:5px;align-items:center}
+.slot-controls button{font-size:11px;cursor:pointer;padding:6px 9px;border:1px solid #3b614a;background:transparent;color:var(--text);border-radius:8px}
+.slot-controls a{font-size:11px}
+@media(max-width:900px){.slot-line{grid-template-columns:1fr 1fr}.slot-controls{grid-column:1/-1}}
+@media(max-width:480px){.slot-line{display:flex;flex-direction:column;align-items:stretch}.slot-controls{grid-column:auto;flex-wrap:wrap}}

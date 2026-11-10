@@ -1,5 +1,5 @@
 /**
- * Padel Booking Leon v1.8 — Wansport multi-club (Pro Padel Club e Punto G).
+ * Padel Booking Leon v1.9 — Wansport multi-club (Pro Padel Club e Punto G).
  * Connettore sperimentale SOLO LETTURA. Non invia richieste di prenotazione.
  * Gunners.gs resta invariato e continua a gestire il club Gunners.
  * Non inserire credenziali o cookie nel codice o nei log.
@@ -128,7 +128,10 @@ function searchExtraWansport_(id,request){
     if(!courts.length)throw Error('Nessun campo restituito: controllare l’ID sport nelle impostazioni.');
     const outside=courts.every(c=>c.isFuoriFinestraTemporale===true);
     const slots=outside?[]:gunnersSlots_(data,request.date,request.time,request.duration,request.tolerance)
-      .map(s=>({...s,club_id:id}));
+      .map(s=>({...s,club_id:id,
+        location:id==='pro'
+          ?(/vigatto/i.test(s.venue)?'Vigatto':/parma/i.test(s.venue)?'Parma':'Parma / Vigatto · sede da verificare')
+          :'Parma'}));
     PropertiesService.getUserProperties().setProperty(extraProp_(id,'LAST_VERIFIED'),now_());
     return {club_id:id,status:outside?'outside_window':slots.length?'available':'no_slots',slots,
       reason:outside?'Data fuori finestra del portale.':slots.length?

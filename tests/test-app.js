@@ -48,11 +48,12 @@ new vm.Script(code,{filename:'Code.gs'}).runInContext(context);
 new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/Gunners.gs'),'utf8'),{filename:'Gunners.gs'}).runInContext(context);
 new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/WansportExtra.gs'),'utf8'),{filename:'WansportExtra.gs'}).runInContext(context);
 new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/Playtomic.gs'),'utf8'),{filename:'Playtomic.gs'}).runInContext(context);
+new vm.Script(fs.readFileSync(path.join(__dirname,'../apps-script/CourtDetails.gs'),'utf8'),{filename:'CourtDetails.gs'}).runInContext(context);
 const run=s=>vm.runInContext(s,context);
 
 test('Google Sheets creato e 4 club senza regole presunte',()=>{
   const setup=run('setupApp()');assert.match(setup.spreadsheetUrl,/docs.google.com/);
-  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.8');assert.equal(dashboard.clubs.length,4);
+  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.9');assert.equal(dashboard.clubs.length,4);
   assert.ok(dashboard.clubs.every(c=>!c.connector.ready&&c.rule_type==='unknown'));
 });
 test('Ricerca reale non simulata',()=>{
