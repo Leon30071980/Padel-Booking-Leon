@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.16 — handoff Wansport sul calendario ufficiale.
+/* Padel Booking Leon v1.17 — handoff Wansport sul calendario ufficiale.
  * Scansione DOM e guida nella pagina; mai confermare una prenotazione o un pagamento.
  * Non trasferire cookie, token o dati di sessione fuori da Wansport.
  */
@@ -25,7 +25,9 @@
  }
  function scan(){
    const id=String(info?.tslot_id||'');
-   const stats={page:inPanel()?'pannello':'altra pagina',id:!!id,attrs:0,handlers:0,domIds:0,count:0};
+   const stats={page:location.pathname,id:!!id,attrs:0,handlers:0,domIds:0,count:0,
+     calendarLike:document.querySelectorAll('[data-tslot-id],[data-tslotid],[id*="tslot"],[class*="slot"],[class*="calendar"],[class*="prenot"]').length,
+     frames:document.querySelectorAll('iframe').length};
    const hits=new Set();
    if(!id||!document.body)return {target:null,stats};
    for(const attr of ID_ATTRS){
@@ -55,14 +57,18 @@
    if(notice){notice.textContent=message;notice.dataset.kind=kind;}
  }
  function describe(stats){
-   return 'Padel Booking Leon v1.16 — diagnosi Wansport\n'+
-     'Dominio: '+location.hostname+'\nPagina: '+(inPanel()?'pannello prenotazioni':location.pathname)+'\n'+
+   return 'Padel Booking Leon v1.17 — diagnosi Wansport\n'+
+     'Dominio: '+location.hostname+'\nPagina: '+location.pathname+'\n'+
+     'Modalità URL: '+(inPanel()?'pannello classico':'pagina web dinamica / altro percorso')+'\n'+
      'Data selezionata: '+short(info?.date)+'\nOrario: '+short(info?.start)+'\n'+
      'ID fascia presente: '+(stats.id?'sì':'no')+'\n'+
+     'Elementi con nomi di calendario (indicativi): '+stats.calendarLike+'\n'+
+     'Iframe nella pagina: '+stats.frames+'\n'+
      'Corrispondenze data-*: '+stats.attrs+'\n'+
      'Corrispondenze onclick: '+stats.handlers+'\n'+
      'Corrispondenze id HTML: '+stats.domIds+'\n'+
      'Elementi utilizzabili: '+stats.count+'\n'+
+     'Il percorso /start NON esclude la presenza del calendario.\n'+
      'Nessun dato di login, cookie o intestazione incluso.';
  }
  function exactTimeslot(){return scan().target;}
@@ -71,12 +77,6 @@
    found=null;
    if(openButton)openButton.disabled=true;
    setNotice('Ricerca in corso nel calendario…');
-   if(!inPanel()){
-     const result=scan();
-     lastDiagnosis=describe(result.stats);
-     setNotice('Tentativo '+attempts+': questa non è la pagina del pannello prenotazioni. Prema «Apri pannello», quindi selezioni il giorno '+short(info?.date)+' e riprovi.', 'warning');
-     return;
-   }
    const {target,stats}=scan();
    lastDiagnosis=describe(stats);
    if(target){
@@ -91,7 +91,7 @@
    }else if(stats.count>1){
      setNotice('Tentativo '+attempts+': Wansport mostra '+stats.count+' elementi con lo stesso ID. Nessuna selezione automatica per evitare il campo sbagliato. Può copiare la diagnosi.', 'warning');
    }else{
-     setNotice('Tentativo '+attempts+': l’ID della fascia non è presente tra gli elementi HTML riconosciuti. Verifichi che il calendario mostri il giorno '+short(info?.date)+'. Se lo mostra, utilizzi «Copia diagnosi».', 'warning');
+     setNotice('Tentativo '+attempts+': non trovo una cella HTML con questo ID nella pagina '+location.pathname+'. Wansport può mostrare il calendario su /start usando JavaScript. Se vede già il giorno '+short(info?.date)+', prema «Copia diagnosi»; non selezionerò una fascia diversa.', 'warning');
    }
  }
  async function copyDiagnosis(){
@@ -128,7 +128,7 @@
      target.click(); // solo dopo azione esplicita, su ID univoco e confermato
      setNotice('Dettaglio richiesto. Controlli durata e prezzo nella finestra Wansport prima di confermare.','ok');
    };
-   const panel=document.createElement('a');panel.textContent='Apri pannello';
+   const panel=document.createElement('a');panel.textContent='Pannello (link alternativo)';
    panel.href=PANEL_PATH;panel.target='_self';
    const diagnostic=document.createElement('button');diagnostic.textContent='Copia diagnosi';diagnostic.onclick=copyDiagnosis;
    const home=document.createElement('a');home.textContent='Portale iniziale';home.href=START_PATH;home.target='_self';
@@ -152,7 +152,7 @@
        scheduled=true;
        setTimeout(()=>{
          scheduled=false;
-         if(!info||found||!inPanel())return;
+         if(!info||found)return;
          const result=scan();
          if(result.target){
            found=result.target;
