@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.18 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.19 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);

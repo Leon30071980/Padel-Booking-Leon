@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.18 — mouse+F8 inspection: zero clicks and bounded metadata. */
+/* Padel Booking Leon v1.19 — mouse+F8 inspection: zero clicks and bounded metadata. */
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
 const source=fs.readFileSync('chrome-extension/wansport-handoff.js','utf8');
 let listeners={},buttons=[],clip='',clicks=0;
@@ -68,5 +68,5 @@ setImmediate(()=>{
  assert.match(clip,/Catena HTML/);
  assert.equal(clicks,0,'La sola copia non deve selezionare né prenotare.');
  assert.doesNotMatch(source,/XMLHttpRequest|fetch\(/);
- console.log('Wansport v1.18: F8 cattura metadati limitati, senza clic o segreti.');
+ console.log('Wansport v1.19: F8 cattura metadati limitati, senza clic o segreti.');
 });

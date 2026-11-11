@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.18 — test percorso Chrome → Wansport, nessun accesso live. */
+/* Padel Booking Leon v1.19 — test percorso Chrome → Wansport, nessun accesso live. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const listeners=[],tabs=[],session=new Map();
 const chrome={runtime:{id:'local-test',lastError:null,onMessage:{addListener(fn){listeners.push(fn);}}},
@@ -66,9 +66,9 @@ let count=0;async function test(name,fn){await fn();count++;console.log('✓ '+n
    assert.match(src,/target\.click\(\)/);
    assert.doesNotMatch(src,/fetch\(|XMLHttpRequest|task=prenotazioni\.(?:save|confirm|book)/i);
    const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-   assert.equal(manifest.version,'1.18.0');
+   assert.equal(manifest.version,'1.19.0');
    assert.deepEqual(manifest.permissions,['storage','tabs']);
    assert.equal(manifest.content_scripts.length,2);
  });
- console.log('Chrome/Wansport handoff v1.18: '+count+' test superati.');
+ console.log('Chrome/Wansport handoff v1.19: '+count+' test superati.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
