@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.17 — preflight only, no booking or payment. */
+/* Padel Booking Leon v1.18 — preflight only, no booking or payment. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const day='2026-11-17';
 let searches=0,mode='available';
@@ -57,4 +57,4 @@ test('Nessuna richiesta di prenotazione nel sorgente',()=>{
  assert.match(ui,/bookingDialog/);
  assert.doesNotMatch(ui,/data-quote-court/);
 });
-console.log('Preflight v1.17: '+count+' test superati.');
+console.log('Preflight v1.18: '+count+' test superati.');
