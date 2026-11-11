@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.17 — handoff Wansport sul calendario ufficiale.
+/* Padel Booking Leon v1.18 — handoff Wansport sul calendario ufficiale.
  * Scansione DOM e guida nella pagina; mai confermare una prenotazione o un pagamento.
  * Non trasferire cookie, token o dati di sessione fuori da Wansport.
  */
@@ -11,6 +11,8 @@
  const START_PATH='/start';
  const ID_ATTRS=['data-tslot-id','data-tslotid','data-tslot','data-tslot_id','data-id-tslot','data-time-slot-id'];
  let info=null,shadow=null,notice=null,found=null,openButton=null,host=null,attempts=0,lastDiagnosis='';
+ let inspectorArmed=false,inspectedElement=null,lastCellStructure='',inspectCopyButton=null;
+ let inspectHighlight=null,inspectStyle=null;
  const short=v=>String(v??'').slice(0,130);
  function inPanel(){
    const u=new URL(location.href);
@@ -57,7 +59,7 @@
    if(notice){notice.textContent=message;notice.dataset.kind=kind;}
  }
  function describe(stats){
-   return 'Padel Booking Leon v1.17 — diagnosi Wansport\n'+
+   return 'Padel Booking Leon v1.18 — diagnosi Wansport\n'+
      'Dominio: '+location.hostname+'\nPagina: '+location.pathname+'\n'+
      'Modalità URL: '+(inPanel()?'pannello classico':'pagina web dinamica / altro percorso')+'\n'+
      'Data selezionata: '+short(info?.date)+'\nOrario: '+short(info?.start)+'\n'+
@@ -99,6 +101,123 @@
    try{await navigator.clipboard.writeText(diagnosis);setNotice('Diagnosi tecnica copiata, senza password o cookie. Può incollarla nella chat per analizzare il calendario.','ok');}
    catch{setNotice('Il browser non consente la copia. Diagnosi: '+diagnosis.replace(/\n/g,' · '),'warning');}
  }
+
+ /**
+  * Campionamento manuale di UNA cella reale.
+  * Non si clicca né si legge l'HTML completo: valori sensibili e testo libero
+  * sono esclusi dal referto, che viene copiato solo per scelta dell'utente.
+  */
+ function safeName(value){
+   const v=String(value||'').slice(0,70);
+   if(!/^[a-z0-9_:-]+$/i.test(v)||/password|passw|token|csrf|auth|session|cookie|email|utente|account|secret|nonce/i.test(v))return '[omesso]';
+   return v.replace(/\d{5,}/g,'#');
+ }
+ function safeAttributeValue(name,value){
+   if(!/^(?:data-|aria-)/.test(name))return '[omesso]';
+   if(!/(?:time|start|end|date|day|slot|tslot|resource|court|campo|id)$/i.test(name))return '[presente]';
+   const v=String(value??'').trim();
+   if(/^\d{1,12}$/.test(v)||/^\d{2}:\d{2}(?::\d{2})?$/.test(v)||
+      /^\d{4}-\d{2}-\d{2}$/.test(v))return v;
+   return '[presente]';
+ }
+ function describeNode(el,depth){
+   const tag=String(el.tagName||'elemento').toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,20);
+   const rawClass=el.getAttribute?.('class')||'';
+   const classes=String(rawClass).split(/\s+/).filter(Boolean).slice(0,9).map(safeName);
+   const id=el.getAttribute?.('id')||'';
+   const attrs=[];
+   for(const attr of Array.from(el.attributes||[])){
+     const name=String(attr.name||'').toLowerCase();
+     if(!/^(data-[a-z0-9_-]{1,45}|aria-[a-z0-9_-]{1,45}|role|title)$/.test(name))continue;
+     attrs.push(safeName(name)+'='+safeAttributeValue(name,attr.value));
+     if(attrs.length>=10)break;
+   }
+   const times=Array.from(new Set((String(el.textContent||'').slice(0,240).match(/\b(?:[01]\d|2[0-3]):[0-5]\d\b/g)||[]))).slice(0,3);
+   return depth+': <'+tag+'> class=['+classes.join(' ')+'] id='+(id?safeName(id):'—')+
+     ' attrs={'+attrs.join('; ')+'} orari=['+times.join(', ')+']';
+ }
+ function makeCellStructure(target){
+   const lines=[
+     'Padel Booking Leon v1.18 — struttura cella Wansport (solo metadati)',
+     'Dominio: '+location.hostname,
+     'Pagina: '+location.pathname,
+     'Data richiesta: '+short(info?.date),
+     'Orario richiesto: '+short(info?.start),
+     'ID fascia ricercato: '+(info?.tslot_id?'presente':'assente'),
+     'Individuazione: cella indicata dall’utente con il mouse e F8; NON selezionata',
+     'Catena HTML (nodo sotto il mouse → contenitori):'
+   ];
+   let node=target;
+   for(let level=0;node&&level<8;level++,node=node.parentElement){
+     if(node===host||node===document.documentElement)break;
+     lines.push(describeNode(node,level));
+   }
+   lines.push('Esclusi: HTML integrale, script, URL, contenuto moduli, credenziali, cookie e token.');
+   return lines.join('\n');
+ }
+ function clearHover(){
+   if(inspectHighlight){
+     inspectHighlight.style.outline=inspectStyle?.outline||'';
+     inspectHighlight.style.outlineOffset=inspectStyle?.outlineOffset||'';
+   }
+   inspectHighlight=null;inspectStyle=null;
+ }
+ function startCellInspect(){
+   clearHover();
+   inspectedElement=null;lastCellStructure='';
+   if(inspectCopyButton)inspectCopyButton.disabled=true;
+   inspectorArmed=true;
+   setNotice('Analisi attiva: sposti il mouse sulla cella delle ore '+short(info?.start)+
+     ' del campo '+short(info?.court)+', poi prema F8 sulla tastiera. NON faccia clic sul campo.','ok');
+ }
+ function handleCellHover(e){
+   if(!inspectorArmed||!e.target||!(e.target instanceof Element))return;
+   if(e.target===host||host?.contains(e.target))return;
+   if(e.target.closest('input,textarea,select,[contenteditable="true"],form[action*="payment"]'))return;
+   let target=e.target;
+   // Il contenitore più vicino con indizi di cella è più informativo del testo figlio.
+   for(let n=e.target,depth=0;n&&depth<4;n=n.parentElement,depth++){
+     if(n===host)break;
+     const cl=String(n.getAttribute?.('class')||'');
+     const id=String(n.getAttribute?.('id')||'');
+     const role=String(n.getAttribute?.('role')||'');
+     if(/slot|tslot|cell|prenot|time|hour|free|liber|available|orari/i.test(cl+' '+id)||role==='gridcell'){
+       target=n;break;
+     }
+   }
+   if(target===inspectHighlight){inspectedElement=target;return;}
+   clearHover();
+   inspectedElement=target;
+   inspectHighlight=target;
+   inspectStyle={outline:target.style.outline,outlineOffset:target.style.outlineOffset};
+   target.style.outline='3px dashed #ffdc70';
+   target.style.outlineOffset='2px';
+ }
+ function handleInspectKey(e){
+   if(!inspectorArmed||e.key!=='F8')return;
+   e.preventDefault();
+   e.stopPropagation();
+   inspectorArmed=false;
+   if(!inspectedElement){
+     setNotice('Nessuna cella sotto il puntatore. Prema «Analizza una cella» e passi sopra lo slot senza cliccare.','warning');
+     return;
+   }
+   lastCellStructure=makeCellStructure(inspectedElement);
+   clearHover();
+   inspectedElement=null;
+   if(inspectCopyButton)inspectCopyButton.disabled=false;
+   setNotice('Struttura della cella acquisita senza cliccare. Prema «Copia struttura» e incolli il testo nella chat.','ok');
+ }
+ async function copyCellStructure(){
+   if(!lastCellStructure)return;
+   try{
+     await navigator.clipboard.writeText(lastCellStructure);
+     setNotice('Struttura della cella copiata. Nessun cookie o HTML integrale incluso. Incolli il testo nella chat.','ok');
+   }catch(e){
+     setNotice('Impossibile copiare automaticamente: controlli i permessi del browser.','warning');
+   }
+ }
+
  function init(){
    if(!info||shadow||!document.body)return;
    host=document.createElement('div');host.id='pbl-handoff-host';
@@ -131,10 +250,14 @@
    const panel=document.createElement('a');panel.textContent='Pannello (link alternativo)';
    panel.href=PANEL_PATH;panel.target='_self';
    const diagnostic=document.createElement('button');diagnostic.textContent='Copia diagnosi';diagnostic.onclick=copyDiagnosis;
+   const inspect=document.createElement('button');inspect.textContent='Analizza una cella';inspect.onclick=startCellInspect;
+   inspectCopyButton=document.createElement('button');inspectCopyButton.textContent='Copia struttura';inspectCopyButton.disabled=true;inspectCopyButton.onclick=copyCellStructure;
    const home=document.createElement('a');home.textContent='Portale iniziale';home.href=START_PATH;home.target='_self';
-   nav.append(find,openButton,panel,diagnostic,home);
+   nav.append(find,openButton,inspect,inspectCopyButton,panel,diagnostic,home);
    const caution=document.createElement('small');caution.textContent='Nessun pagamento, prenotazione o addebito automatico.';
    box.append(dl,notice,nav,caution);shadow.append(style,box);document.body.append(host);
+   document.addEventListener('pointerover',handleCellHover,true);
+   document.addEventListener('keydown',handleInspectKey,true);
    locate();
  }
  function request(attempt=0){
