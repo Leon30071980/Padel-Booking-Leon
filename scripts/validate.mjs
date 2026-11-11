@@ -8,7 +8,7 @@ const code=read('apps-script/Code.gs');
 assert.match(code,/PBL_VERSION\s*=\s*'v1\.20'/);
 assert.match(read('github-pages/index.html'),/v1\.20/);
 assert.match(read('apps-script/Client.html'),/v1\.20/);
-assert.match(read('apps-script/Index.html'),/v1\.20/);
+assert.match(read('apps-script/Index.html'),/<\?= version \?>/);
 const manifest=JSON.parse(read('apps-script/appsscript.json'));
 assert.equal(manifest.timeZone,'Europe/Rome');
 assert.equal(manifest.runtimeVersion,'V8');
