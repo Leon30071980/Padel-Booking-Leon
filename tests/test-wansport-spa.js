@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.17 — il calendario SPA può restare su /start.
+/* Padel Booking Leon v1.18 — il calendario SPA può restare su /start.
  * Test DOM simulato: garantisce che la ricerca non venga fermata dal percorso URL.
  */
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
@@ -47,4 +47,4 @@ new vm.Script(source,{filename:'wansport-handoff.js'}).runInContext(ctx);
 assert.equal(slot.scrolled,true,'Il timeslot valido su /start deve essere evidenziato.');
 assert.ok(observeCount>=1,'Deve monitorare il calendario dinamico.');
 assert.match(source,/target\.click\(\)/);
-console.log('Wansport v1.17: SPA /start riconosciuta e slot univoco evidenziato.');
+console.log('Wansport v1.18: SPA /start riconosciuta e slot univoco evidenziato.');
