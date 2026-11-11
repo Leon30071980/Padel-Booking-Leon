@@ -1,8 +1,8 @@
 {
   "name": "padel-booking-leon",
   "private": true,
-  "version": "1.16.0",
-  "description": "Padel Booking Leon — v1.16 (full GitHub Pages UI, private Google Apps Script bridge)",
+  "version": "1.17.0",
+  "description": "Padel Booking Leon — v1.17 (full GitHub Pages UI, private Google Apps Script bridge)",
   "scripts": {
     "test": "node tests/test-app.js && node tests/test-gunners.js && node tests/test-extra.js && node scripts/validate.mjs && node tests/test-bridge.js && node tests/test-playtomic.js && node tests/test-chrome-extension.js && node tests/test-court-details.js && node tests/test-quotes.js && node tests/test-booking-preflight.js && node tests/test-handoff.js && node tests/test-handoff-versions.js && node --check github-pages/app.js && node --check chrome-extension/background.js && node --check chrome-extension/wansport-handoff.js && node --check chrome-extension/content.js && node --check github-pages/chrome-bridge.js",
     "check": "node scripts/validate.mjs"
