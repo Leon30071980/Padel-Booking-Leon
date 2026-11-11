@@ -39,7 +39,7 @@
       runner[msg.action].apply(runner,msg.args);
     }catch(error){send('result',{id:msg.id,ok:false,error:String(error&&error.message||error).slice(0,600)});}
   });
-  send('ready',{version:'v1.18'});
+  send('ready',{version:'v1.19'});
 })();
 </script>
 </body>
