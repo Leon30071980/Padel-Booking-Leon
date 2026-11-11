@@ -9,7 +9,7 @@ assert.match(source,/if\(!info\|\|found\)return/);
 assert.match(source,/Elementi con nomi di calendario/);
 assert.match(source,/Iframe nella pagina/);
 assert.match(source,/Copia diagnosi/);
-const fakeBody={};
+const fakeBody={append(){}};
 const fakeElement=function(){};
 fakeElement.prototype.closest=()=>null;
 fakeElement.prototype.scrollIntoView=function(){this.scrolled=true;};
