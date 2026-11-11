@@ -5,7 +5,7 @@ function scenario({court='1',time='20:00',cells=['20:00'],dateConfirmed=false,wr
  const buttons=[],clicked=[],questions=[];
  class Elem {
   constructor(tag='div'){this.tagName=tag.toUpperCase();this.style={outline:'',outlineOffset:''};
-   this.attrs={};this.textContent='';this.classList={contains:name=>name==='tslotAttivo'};}
+   this.attrs={};this.dataset={};this.textContent='';this.classList={contains:name=>name==='tslotAttivo'};}
   getAttribute(name){return this.attrs[name]||null;}
   closest(){return null;}
   contains(){return false;}
