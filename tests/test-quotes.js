@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.16 — test quotazioni automatiche 60/90/120, senza HTTP esterno. */
+/* Padel Booking Leon v1.17 — test quotazioni automatiche 60/90/120, senza HTTP esterno. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const day='2026-11-10';
 let quotedBody,quoteStatus=200,requests=[],calendarWithId=true,sessionCount=0,calendarCount=0,rateLimit=false;
@@ -113,4 +113,4 @@ test('Cache breve riusa lo stesso preventivo verificato',()=>{
  assert.equal(requests.length,before);
  assert.equal(r.quotes[0].cached,true);
 });
-console.log('Preventivi Wansport v1.16: '+count+' test superati.');
+console.log('Preventivi Wansport v1.17: '+count+' test superati.');
