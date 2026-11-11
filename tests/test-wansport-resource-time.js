@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.19 — real Pro Padel row/time DOM fixture and safe click. */
+/* Padel Booking Leon v1.20 — real Pro Padel row/time DOM fixture and safe click. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const code=fs.readFileSync('chrome-extension/wansport-handoff.js','utf8');
 function scenario({court='1',time='20:00',cells=['20:00'],dateConfirmed=false,wrongRow=false}={}){
@@ -67,4 +67,4 @@ for(const variant of [{cells:['19:30']},{cells:['20:00','20:00']},
 assert.match(code,/scanResourceClock/);
 assert.match(code,/resourceClockMatches/);
 assert.doesNotMatch(code,/fetch\(|XMLHttpRequest|\.submit\(/);
-console.log('Wansport v1.19: riga campo + ora esatta, unicità e conferma data superati.');
+console.log('Wansport v1.20: riga campo + ora esatta, unicità e conferma data superati.');

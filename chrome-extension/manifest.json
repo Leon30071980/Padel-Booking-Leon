@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Padel Booking Leon - Playtomic e Wansport",
-  "version": "1.19.0",
-  "description": "Disponibilità Playtomic e apertura assistita del campo Wansport; nessuna conferma automatica.",
+  "version": "1.20.0",
+  "description": "Disponibilità Playtomic e prenotazione assistita su Pro Padel Wansport con conferma esplicita.",
   "host_permissions": [
     "https://playtomic.com/*"
   ],
@@ -26,7 +26,8 @@
         "https://puntogpadel.wansport.com/*"
       ],
       "js": [
-        "wansport-handoff.js"
+        "wansport-handoff.js",
+        "wansport-booking.js"
       ],
       "run_at": "document_idle"
     }

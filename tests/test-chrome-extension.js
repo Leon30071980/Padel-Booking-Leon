@@ -1,10 +1,11 @@
-/* Padel Booking Leon v1.19 — unit tests extension MV3, senza rete o sessioni. */
+/* Padel Booking Leon v1.20 — unit tests extension MV3, senza rete o sessioni. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
 assert.equal(manifest.manifest_version,3);
 assert.deepEqual(manifest.host_permissions,['https://playtomic.com/*']);
 assert.equal(manifest.content_scripts.length,2);
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('wansport-handoff.js')));
+assert.ok(manifest.content_scripts.some(s=>s.js.includes('wansport-booking.js')));
 assert.ok(manifest.content_scripts[0].matches[0].includes('Padel-Booking-Leon'));
 const source=fs.readFileSync('chrome-extension/background.js','utf8');
 const listener={};let status=200,body=[],fetchCalls=[];

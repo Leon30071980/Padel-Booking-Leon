@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.19 — handoff Wansport sul calendario ufficiale.
+/* Padel Booking Leon v1.20 — handoff Wansport sul calendario ufficiale.
  * Scansione DOM e guida nella pagina; mai confermare una prenotazione o un pagamento.
  * Non trasferire cookie, token o dati di sessione fuori da Wansport.
  */
@@ -99,7 +99,7 @@
    if(notice){notice.textContent=message;notice.dataset.kind=kind;}
  }
  function describe(stats){
-   return 'Padel Booking Leon v1.19 — diagnosi Wansport\n'+
+   return 'Padel Booking Leon v1.20 — diagnosi Wansport\n'+
      'Dominio: '+location.hostname+'\nPagina: '+location.pathname+'\n'+
      'Modalità URL: '+(inPanel()?'pannello classico':'pagina web dinamica / altro percorso')+'\n'+
      'Data selezionata: '+short(info?.date)+'\nOrario: '+short(info?.start)+'\n'+
@@ -183,7 +183,7 @@
  }
  function makeCellStructure(target){
    const lines=[
-     'Padel Booking Leon v1.19 — struttura cella Wansport (solo metadati)',
+     'Padel Booking Leon v1.20 — struttura cella Wansport (solo metadati)',
      'Dominio: '+location.hostname,
      'Pagina: '+location.pathname,
      'Data richiesta: '+short(info?.date),

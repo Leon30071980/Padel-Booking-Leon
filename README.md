@@ -1,3 +1,17 @@
+# Padel Booking Leon — v1.20
+
+## Novità v1.20 — assistente prenotazione Pro Padel
+
+La ricerca e l'apertura del dettaglio fascia della v1.19 rimangono intatte. Sul sito ufficiale Pro Padel, dopo l'apertura di «Nuova prenotazione», l'estensione Chrome presenta «Imposta durata e privacy»: tenta di selezionare 60, 90 o 120 minuti in base alla scelta dell'app (Wansport seleziona per default 1 ora), e verifica «Attività privata». L'azione «Prenota · paga al centro» si abilita solo quando la schermata mostra senza ambiguità campo, data, orario iniziale, orario finale e costo, e quando la privacy è selezionata o verificata manualmente. La prenotazione viene inviata soltanto dopo un'ulteriore conferma esplicita dell'utente, con un clic unico sul comando «Prenota — Paga al centro con contanti o carta»; mai sul pagamento online.
+
+In caso di dati incoerenti o pagina non riconosciuta il pulsante rimane disabilitato. Non si tenta un secondo invio dopo esito incerto. La chiusura della finestra non certifica una prenotazione riuscita: verificare sempre il messaggio del portale o le prenotazioni effettuate. La struttura dei pulsanti è dedotta dallo screenshot e richiede collaudo sul sito reale. Nessuna API di conferma o POST diretto. Il backend Google e il controllo programmato restano di sola lettura.
+
+### Installazione
+
+Aggiornare GitHub Desktop con Fetch/Pull origin, aprire `chrome://extensions`, cliccare **Ricarica** per Padel Booking Leon e aggiornare GitHub Pages con Ctrl+F5. Il nuovo file `chrome-extension/wansport-booking.js` viene caricato su Pro Padel insieme al rilevatore della v1.19. Le precedenti funzioni restano disponibili. Non è necessario reinstallare o riconfigurare Google Apps Script per questo nuovo modulo di assistenza Chrome; l'eventuale aggiornamento del backend alla stessa etichetta v1.20 segue il normale processo di deployment.
+
+---
+
 # Padel Booking Leon — v1.19
 
 ## Selezione assistita del campo Wansport

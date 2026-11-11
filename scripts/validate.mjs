@@ -65,4 +65,7 @@ for (const f of files) {
  assert.doesNotMatch(content,/-----BEGIN (?:RSA|OPENSSH|EC|PRIVATE) KEY-----/);
  assert.doesNotMatch(content,/ghp_[A-Za-z0-9]{20,}/);
 }
-console.log('v1.19: 12 file Apps Script, manifest, versione e verifiche di base OK.');
+console.log('v1.20: 12 file Apps Script, manifest, versione e verifiche di base OK.');
+
+assert.match(read('chrome-extension/manifest.json'),/wansport-booking\.js/);
+assert.match(read('chrome-extension/wansport-booking.js'),/Imposta durata e privacy/);
