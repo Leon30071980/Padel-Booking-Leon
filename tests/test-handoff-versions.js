@@ -7,7 +7,7 @@ const app=fs.readFileSync('github-pages/app.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
 assert.equal(manifest.version,'1.20.0');
 assert.match(content,/wansport-handoff/);
-assert.match(content,/version:'v1\.19'/);
+assert.match(content,/version:'v1\.20'/);
 assert.match(bridge,/capabilities\.has\('wansport-handoff'\)/);
 assert.match(app,/Guida Wansport:/);
 assert.match(app,/handoffFailed/);
