@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Padel Booking Leon - Playtomic e Wansport",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "description": "Disponibilità Playtomic e apertura assistita del campo Wansport; nessuna conferma automatica.",
   "host_permissions": [
     "https://playtomic.com/*"
