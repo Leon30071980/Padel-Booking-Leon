@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.18 — handoff Wansport sul calendario ufficiale.
+/* Padel Booking Leon v1.19 — handoff Wansport sul calendario ufficiale.
  * Scansione DOM e guida nella pagina; mai confermare una prenotazione o un pagamento.
  * Non trasferire cookie, token o dati di sessione fuori da Wansport.
  */
@@ -25,11 +25,51 @@
    if(el.closest('[data-action*="payment"],[data-action*="confirm"],[data-action*="delete"]'))return false;
    return true;
  }
+
+ /* Pro Padel espone le righe con id griglia-row-resource-id-N e le singole
+  * mezz'ore con div.tslot. Individuiamo campo e ora insieme; nessun ID Wansport
+  * viene dedotto dalla posizione delle celle, e non selezioniamo nulla se >1 match.
+  * La data non è leggibile con certezza da questa struttura DOM: prima del
+  * click l'utente deve confermarla esplicitamente sul calendario visibile.
+  */
+ function scanResourceClock(){
+   const out={target:null,count:0,rowFound:false,activeCount:0};
+   const court=String(info?.court_id||''),time=String(info?.start||'');
+   if(!/^[1-9]\d{0,11}$/.test(court)||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time))return out;
+   const row=document.getElementById('griglia-row-resource-id-'+court);
+   if(!row||!row.classList?.contains('resRow'))return out;
+   out.rowFound=true;
+   const matches=[];
+   for(const cell of row.querySelectorAll('div.tslot')){
+     if(!cell.classList?.contains('tslotAttivo')||!safeCandidate(cell))continue;
+     out.activeCount++;
+     const text=String(cell.textContent||'').trim();
+     const clocks=text.match(/(?:^|\s)(?:[01]\d|2[0-3]):[0-5]\d(?=\s|$)/g)||[];
+     const exact=clocks.map(v=>v.trim());
+     // La cella dev'essere chiaramente e unicamente etichettata con l'ora.
+     if(exact.length===1&&exact[0]===time)matches.push(cell);
+   }
+   out.count=matches.length;
+   out.target=matches.length===1?matches[0]:null;
+   return out;
+ }
+
  function scan(){
    const id=String(info?.tslot_id||'');
    const stats={page:location.pathname,id:!!id,attrs:0,handlers:0,domIds:0,count:0,
      calendarLike:document.querySelectorAll('[data-tslot-id],[data-tslotid],[id*="tslot"],[class*="slot"],[class*="calendar"],[class*="prenot"]').length,
-     frames:document.querySelectorAll('iframe').length};
+     frames:document.querySelectorAll('iframe').length,
+     rowFound:false,resourceClockMatches:0,resourceActiveCells:0};
+   // Solo per Pro Padel usiamo la corrispondenza effettivamente osservata:
+   // risorsa identificata dal row-id e ora scritta dentro un div.tslotAttivo.
+   if(location.hostname==='propadelclub.wansport.com'){
+     const result=scanResourceClock();
+     stats.rowFound=result.rowFound;
+     stats.resourceClockMatches=result.count;
+     stats.resourceActiveCells=result.activeCount;
+     stats.count=result.count;
+     return {target:result.target,stats};
+   }
    const hits=new Set();
    if(!id||!document.body)return {target:null,stats};
    for(const attr of ID_ATTRS){
@@ -59,7 +99,7 @@
    if(notice){notice.textContent=message;notice.dataset.kind=kind;}
  }
  function describe(stats){
-   return 'Padel Booking Leon v1.18 — diagnosi Wansport\n'+
+   return 'Padel Booking Leon v1.19 — diagnosi Wansport\n'+
      'Dominio: '+location.hostname+'\nPagina: '+location.pathname+'\n'+
      'Modalità URL: '+(inPanel()?'pannello classico':'pagina web dinamica / altro percorso')+'\n'+
      'Data selezionata: '+short(info?.date)+'\nOrario: '+short(info?.start)+'\n'+
@@ -69,6 +109,9 @@
      'Corrispondenze data-*: '+stats.attrs+'\n'+
      'Corrispondenze onclick: '+stats.handlers+'\n'+
      'Corrispondenze id HTML: '+stats.domIds+'\n'+
+     'Riga del campo individuata: '+(stats.rowFound?'sì':'no')+'\n'+
+     'Celle attive nella riga: '+stats.resourceActiveCells+'\n'+
+     'Corrispondenze campo + ora: '+stats.resourceClockMatches+'\n'+
      'Elementi utilizzabili: '+stats.count+'\n'+
      'Il percorso /start NON esclude la presenza del calendario.\n'+
      'Nessun dato di login, cookie o intestazione incluso.';
@@ -87,13 +130,15 @@
      found.style.outlineOffset='2px';
      found.scrollIntoView({block:'center',behavior:'smooth'});
      if(openButton)openButton.disabled=false;
-     setNotice('Tentativo '+attempts+': fascia identificata in modo univoco ed evidenziata in verde. «Apri dettaglio fascia» apre soltanto il riepilogo Wansport.', 'ok');
+     setNotice('Tentativo '+attempts+': campo e ora '+short(info?.start)+' individuati in modo univoco. Fascia evidenziata in verde. Prima di aprire il dettaglio dovrà confermare che la data sul calendario sia '+short(info?.date)+'.', 'ok');
    }else if(!stats.id){
      setNotice('Tentativo '+attempts+': il risultato della nostra app non contiene l’ID della fascia (tslotId). Non posso selezionarla in sicurezza. Apra il calendario del giorno e scelga il campo manualmente.', 'warning');
    }else if(stats.count>1){
      setNotice('Tentativo '+attempts+': Wansport mostra '+stats.count+' elementi con lo stesso ID. Nessuna selezione automatica per evitare il campo sbagliato. Può copiare la diagnosi.', 'warning');
    }else{
-     setNotice('Tentativo '+attempts+': non trovo una cella HTML con questo ID nella pagina '+location.pathname+'. Wansport può mostrare il calendario su /start usando JavaScript. Se vede già il giorno '+short(info?.date)+', prema «Copia diagnosi»; non selezionerò una fascia diversa.', 'warning');
+     setNotice(location.hostname==='propadelclub.wansport.com'?
+       'Tentativo '+attempts+': non trovo una sola cella attiva alle '+short(info?.start)+' nella riga del campo ID '+short(info?.court_id)+'. Verifichi che sul portale siano visibili la data '+short(info?.date)+' e il campo richiesto, poi utilizzi «Copia diagnosi».':
+       'Tentativo '+attempts+': non trovo una cella HTML con questo ID nella pagina '+location.pathname+'. Se il calendario mostra la data '+short(info?.date)+', utilizzi «Copia diagnosi».', 'warning');
    }
  }
  async function copyDiagnosis(){
@@ -138,7 +183,7 @@
  }
  function makeCellStructure(target){
    const lines=[
-     'Padel Booking Leon v1.18 — struttura cella Wansport (solo metadati)',
+     'Padel Booking Leon v1.19 — struttura cella Wansport (solo metadati)',
      'Dominio: '+location.hostname,
      'Pagina: '+location.pathname,
      'Data richiesta: '+short(info?.date),
@@ -243,9 +288,17 @@
    openButton=document.createElement('button');openButton.textContent='Apri dettaglio fascia';openButton.disabled=true;
    openButton.onclick=()=>{
      const target=exactTimeslot();
-     if(!target){locate();return;}
-     target.click(); // solo dopo azione esplicita, su ID univoco e confermato
-     setNotice('Dettaglio richiesto. Controlli durata e prezzo nella finestra Wansport prima di confermare.','ok');
+     if(!target||!found||target!==found){locate();return;}
+     const question='Sul calendario Wansport è selezionata la data '+short(info?.date)+'?\n'+
+       'Il campo evidenziato è «'+short(info?.court)+'», ore '+short(info?.start)+'?\n\n'+
+       'Confermando si apre SOLO il dettaglio della fascia, NON si prenota né si paga.';
+     if(!window.confirm(question)){
+       setNotice('Data/campo non confermati. Nessuna selezione effettuata.', 'warning');return;
+     }
+     // Riconvalidare dopo il dialogo, senza effettuare alcun click in automatico.
+     if(exactTimeslot()!==target){locate();return;}
+     target.click();
+     setNotice('Dettaglio richiesto. Verifichi data, durata e prezzo nel portale prima di confermare.', 'ok');
    };
    const panel=document.createElement('a');panel.textContent='Pannello (link alternativo)';
    panel.href=PANEL_PATH;panel.target='_self';
