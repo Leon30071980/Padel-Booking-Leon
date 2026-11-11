@@ -53,7 +53,7 @@ const run=s=>vm.runInContext(s,context);
 
 test('Google Sheets creato e 4 club senza regole presunte',()=>{
   const setup=run('setupApp()');assert.match(setup.spreadsheetUrl,/docs.google.com/);
-  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.19');assert.equal(dashboard.clubs.length,4);
+  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.20');assert.equal(dashboard.clubs.length,4);
   assert.ok(dashboard.clubs.every(c=>!c.connector.ready&&c.rule_type==='unknown'));
 });
 test('Ricerca reale non simulata',()=>{
