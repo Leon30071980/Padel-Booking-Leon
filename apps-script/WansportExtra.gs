@@ -1,12 +1,14 @@
 /**
- * Padel Booking Leon v1.19 — Wansport multi-club (Pro Padel Club e Punto G).
+ * Padel Booking Leon v1.21 — Wansport multi-club (Pro, Punto G, Don Bosco, Inzani).
  * Connettore sperimentale SOLO LETTURA. Non invia richieste di prenotazione.
  * Gunners.gs resta invariato e continua a gestire il club Gunners.
  * Non inserire credenziali o cookie nel codice o nei log.
  */
 const PBL_EXTRA_WS_ = Object.freeze({
   pro:'https://propadelclub.wansport.com',
-  puntog:'https://puntogpadel.wansport.com'
+  puntog:'https://puntogpadel.wansport.com',
+  donbosco:'https://pgsdonbosco.wansport.com',
+  inzani:'https://circoloinzani.wansport.com'
 });
 function extraConfig_(id){
   if(!Object.prototype.hasOwnProperty.call(PBL_EXTRA_WS_,id))throw Error('Centro Wansport non riconosciuto.');
@@ -15,10 +17,15 @@ function extraConfig_(id){
 function extraProp_(id,suffix){return extraConfig_(id).prefix+suffix;}
 function extraConnStatus_(id){
   const p=PropertiesService.getUserProperties();
-  const configured=!!(p.getProperty(extraProp_(id,'USERNAME'))&&p.getProperty(extraProp_(id,'PASSWORD')));
+  const creds=!!(p.getProperty(extraProp_(id,'USERNAME'))&&p.getProperty(extraProp_(id,'PASSWORD')));
+  // Don Bosco e Inzani sono multi-sport: nessun filtro predefinito senza conferma.
+  const needsSport=(id==='donbosco'||id==='inzani');
+  const sportId=p.getProperty(extraProp_(id,'SPORT_ID'))||'';
+  const configured=creds&&(!needsSport||/^[1-9][0-9]{0,4}$/.test(sportId));
   const verified=configured?p.getProperty(extraProp_(id,'LAST_VERIFIED'))||'':'';
   return {ready:!!verified,configured,booking_ready:false,last_verified:verified||null,
-    reason:verified?'Ultimo calendario verificato: '+verified:configured?'Credenziali presenti, verificare accesso':'Credenziali da configurare'};
+    sport_id:sportId?Number(sportId):null,
+    reason:!creds?'Credenziali da configurare':!configured?'Inserire l’ID sport PADEL verificato sul portale':verified?'Ultimo calendario verificato: '+verified:'Credenziali presenti, verificare accesso'};
 }
 function saveWansportCredentials(input){
   if(!input||typeof input!=='object')throw Error('Dati accesso mancanti.');
@@ -26,7 +33,7 @@ function saveWansportCredentials(input){
   if(id==='gunners')return saveGunnersCredentials(input);
   extraConfig_(id);
   const username=String(input.username||'').trim(),password=String(input.password||'');
-  const sportId=Number(input.sportId||15);
+  const sportId=(id==='donbosco'||id==='inzani')?Number(input.sportId):Number(input.sportId||15);
   if(!username||username.length>200||!password||password.length>256)throw Error('Credenziali non valide.');
   if(!Number.isInteger(sportId)||sportId<1||sportId>99999)throw Error('ID sport non valido.');
   const p=PropertiesService.getUserProperties();
@@ -104,7 +111,8 @@ function extraSession_(id){
 function extraCalendar_(id,day,sessionCookies){
   dateCheck_(day);
   const cfg=extraConfig_(id),p=PropertiesService.getUserProperties();
-  const sportId=Number(p.getProperty(extraProp_(id,'SPORT_ID'))||15);
+  const sportId=Number(p.getProperty(extraProp_(id,'SPORT_ID'))||((id==='donbosco'||id==='inzani')?0:15));
+  if(!Number.isInteger(sportId)||sportId<1)throw Error('ID sport PADEL da impostare prima della ricerca.');
   const cookies=sessionCookies||extraSession_(id);
   const path='/index.php?option=com_wansport&task=prenotazioni.getPannelloPrenotazioni&format=raw'
     +'&filtroData='+encodeURIComponent(day)+'&filtroSport='+encodeURIComponent(sportId)+'&isWannaplay=0';
@@ -117,12 +125,17 @@ function extraCalendar_(id,day,sessionCookies){
   try{data=JSON.parse(response.getContentText());}catch(e){throw Error('Nessuna risposta JSON valida dal calendario.');}
   if(!data||data.success!==true||!data.dati||!Array.isArray(data.dati.sedi))throw Error('Struttura calendario non riconosciuta.');
   if(data.dati.sportId!=null && Number(data.dati.sportId)!==sportId)throw Error('Identificativo sport differente da quello richiesto.');
+  if((id==='donbosco'||id==='inzani')&&data.dati.sportId==null)
+    throw Error('Il calendario non conferma l’ID sport: impossibile escludere altre discipline.');
+  const sportName=data.dati.nomeSport||data.dati.sportNome||data.dati.sport?.nome||'';
+  if((id==='donbosco'||id==='inzani')&&sportName&&!/padel/i.test(String(sportName)))
+    throw Error('Il calendario corrisponde a un altro sport, non al PADEL.');
   return data;
 }
 function searchExtraWansport_(id,request){
   extraConfig_(id);
-  if(!extraConnStatus_(id).configured)return {club_id:id,status:'auth_required',slots:[],
-    reason:'Configurare l’accesso '+id+' nella scheda del centro sportivo.'};
+  const status=extraConnStatus_(id);
+  if(!status.configured)return {club_id:id,status:'auth_required',slots:[],reason:status.reason};
   try{
     const data=extraCalendar_(id,request.date),courts=data.dati.sedi.flatMap(s=>s.risorse||[]);
     if(!courts.length)throw Error('Nessun campo restituito: controllare l’ID sport nelle impostazioni.');
@@ -132,7 +145,7 @@ function searchExtraWansport_(id,request){
         // Sedi leggibili dal nome del campo o della sede Wansport.
         // PRO GREEN = impianto Vigatto, PRO PARMA = impianto Parma.
         const label=String(s.court||'')+' '+String(s.venue||'');
-        const location=id!=='pro'?'Parma':
+        const location=id==='donbosco'?'Basilicanova':id==='inzani'?'Parma · Moletolo':id!=='pro'?'Parma':
           /(?:pro[\s-]*green|vigatto)/i.test(label)?'Vigatto':
           /(?:pro[\s-]*parma|\bparma\b)/i.test(label)?'Parma':
           'Parma / Vigatto · sede da verificare';
@@ -149,7 +162,7 @@ function searchExtraWansport_(id,request){
   }
 }
 function testWansportConnection(id){
-  if(!['gunners','pro','puntog'].includes(id))throw Error('Il centro non utilizza il connettore Wansport.');
+  if(!['gunners','pro','puntog','donbosco','inzani'].includes(id))throw Error('Il centro non utilizza il connettore Wansport.');
   const r=id==='gunners'?searchGunners_({date:romeToday_(),time:'20:00',duration:90,tolerance:60}):
     searchExtraWansport_(id,{date:romeToday_(),time:'20:00',duration:90,tolerance:60});
   return {ok:['available','no_slots','outside_window'].includes(r.status),status:r.status,note:r.reason,slots_count:r.slots.length};
