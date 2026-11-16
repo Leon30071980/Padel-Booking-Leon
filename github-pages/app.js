@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.20 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.21 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -421,7 +421,7 @@
     $('wansportClubId').value=id;
     $('wansportDialogTitle').textContent=club.name;
     $('wansportUsername').value='';$('wansportPassword').value='';
-    $('wansportSportId').value='15';
+    $('wansportSportId').value=(id==='donbosco'||id==='inzani')?'':String(club.connector?.sport_id||15);
     $('wansportSportWrap').classList.toggle('hidden',id==='gunners');
     $('wansportMessage').textContent='Le password già memorizzate non sono mostrate. Nuove credenziali sostituiscono le precedenti.';
     $('wansportDialog').showModal();
