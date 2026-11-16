@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Padel Booking Leon - Playtomic e Wansport",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "Disponibilità Playtomic e prenotazione assistita su Pro Padel Wansport con conferma esplicita.",
   "host_permissions": [
     "https://playtomic.com/*"
@@ -23,7 +23,9 @@
       "matches": [
         "https://gunnerspadel.wansport.com/*",
         "https://propadelclub.wansport.com/*",
-        "https://puntogpadel.wansport.com/*"
+        "https://puntogpadel.wansport.com/*",
+        "https://pgsdonbosco.wansport.com/*",
+        "https://circoloinzani.wansport.com/*"
       ],
       "js": [
         "wansport-handoff.js",
