@@ -19,4 +19,4 @@ const b=background.indexOf("await chrome.tabs.update(tab.id,{url})");
 assert.ok(a>=0&&b>a,'La navigazione deve avvenire DOPO il salvataggio dei dati');
 assert.match(background,/catch\(err\)\{/);
 new vm.Script(bridge);new vm.Script(content);new vm.Script(background);
-console.log('Wansport v1.20: handshake di versione, diagnosi e sequenza di apertura verificati.');
+console.log('Wansport v1.21: handshake di versione, diagnosi e sequenza di apertura verificati.');

@@ -8,7 +8,9 @@ const wansport=manifest.content_scripts.find(s=>s.js.includes('wansport-booking.
 assert.ok(wansport&&wansport.js.includes('wansport-handoff.js'));
 assert.deepEqual(wansport.matches.sort(),[
  'https://gunnerspadel.wansport.com/*','https://propadelclub.wansport.com/*',
- 'https://puntogpadel.wansport.com/*'].sort());
+ 'https://puntogpadel.wansport.com/*',
+ 'https://pgsdonbosco.wansport.com/*',
+ 'https://circoloinzani.wansport.com/*'].sort());
 assert.match(source,/location\.hostname!=='propadelclub\.wansport\.com'/);
 assert.match(source,/const allowedDurations=new Set\(\[60,90,120\]\)/);
 assert.match(source,/s\.durAction\.click\(\)/);
@@ -21,4 +23,4 @@ assert.match(source,/if\(submitted\|\|!modal\)return/);
 assert.match(source,/Pagamento AL CENTRO|pagamento AL CENTRO|pagamento al centro/i);
 assert.doesNotMatch(source,/fetch\(|XMLHttpRequest|\.submit\(|\.requestSubmit\(/);
 assert.doesNotMatch(source,/setInterval\(/);
-console.log('Wansport v1.20: durata, privacy, costo, conferma esplicita e blocco doppio invio presenti.');
+console.log('Wansport v1.21: durata, privacy, costo, conferma esplicita e blocco doppio invio presenti.');
