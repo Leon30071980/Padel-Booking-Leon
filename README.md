@@ -1,3 +1,21 @@
+# Padel Booking Leon — v1.21
+
+## Nuovi centri Wansport: Don Bosco e Circolo Inzani
+
+Aggiunti **PGS Don Bosco Basilicanova** (`https://pgsdonbosco.wansport.com/`) e **Circolo Inzani — Padel** (`https://circoloinzani.wansport.com/`) al catalogo di ricerca, alle richieste pianificate e alla guida Chrome per individuare la fascia. Il Circolo Inzani gestisce più discipline: **impostare l'ID sport della sezione Padel dopo averlo verificato sul portale**, senza presumere che corrisponda all'ID 15 usato su altri siti. Anche per Don Bosco l'ID sport è richiesto esplicitamente.
+
+Per entrambi la ricerca rimane **in sola lettura** e richiede credenziali personali configurate nel backend Google. Nessun risultato è dichiarato prenotabile senza risposta valida del calendario e controllo dell'identificativo sportivo. La prenotazione assistita con conferma finale rimane limitata a **Pro Padel**. Nessuna prenotazione automatica è attiva.
+
+### Aggiornamento
+
+1. `GitHub Desktop`: `Fetch origin` e `Pull origin`.
+2. Nel progetto **Google Apps Script** sincronizzare i file della cartella `apps-script`, quindi pubblicare una **nuova versione del deployment** (URL del ponte invariato).
+3. In Chrome aprire `chrome://extensions` e premere **Ricarica** sull'estensione Padel Booking Leon.
+4. Aggiornare l'app GitHub Pages con **Ctrl+F5** e configurare i due nuovi centri nella sezione **I tuoi centri**.
+5. Per Don Bosco e Inzani, inserire esclusivamente l'ID sport verificato per **Padel** e provare il collegamento. I siti potrebbero richiedere login o flussi differenti: la compatibilità live non è ancora verificata.
+
+---
+
 # Padel Booking Leon — v1.20
 
 ## Novità v1.20 — assistente prenotazione Pro Padel
