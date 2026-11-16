@@ -1,13 +1,13 @@
-/* Padel Booking Leon v1.20 — handshake Chrome / Wansport and race regression. */
+/* Padel Booking Leon v1.21 — handshake Chrome / Wansport and race regression. */
 const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
 const bridge=fs.readFileSync('github-pages/chrome-bridge.js','utf8');
 const content=fs.readFileSync('chrome-extension/content.js','utf8');
 const background=fs.readFileSync('chrome-extension/background.js','utf8');
 const app=fs.readFileSync('github-pages/app.js','utf8');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-assert.equal(manifest.version,'1.20.0');
+assert.equal(manifest.version,'1.21.0');
 assert.match(content,/wansport-handoff/);
-assert.match(content,/version:'v1\.20'/);
+assert.match(content,/version:'v1\.21'/);
 assert.match(bridge,/capabilities\.has\('wansport-handoff'\)/);
 assert.match(app,/Guida Wansport:/);
 assert.match(app,/handoffFailed/);
