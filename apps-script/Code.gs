@@ -163,7 +163,12 @@ function saveClubRule(payload){
     const patch={priority:integer_(payload.priority,1,50,'Priorità'),enabled:payload.enabled===true?'true':'false',
       rule_type:payload.rule_type,advance_value:'',release_time:timeCheck_(payload.release_time||'00:01')};
     if(payload.rule_type!=='unknown')patch.advance_value=integer_(payload.advance_value,1,1440,'Anticipo');
-    updateRow_('Clubs',payload.id,patch);
+    // Permette di configurare i centri aggiunti in v1.21 anche su Sheets esistenti.
+    if(records_('Clubs').some(r=>r.id===payload.id))updateRow_('Clubs',payload.id,patch);
+    else {
+      const club=findClub_(payload.id);
+      append_('Clubs',{...club,...patch,id:club.id});
+    }
     recalculate_(payload.id);
     return {ok:true};
   });
