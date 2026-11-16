@@ -1,9 +1,9 @@
-/* Padel Booking Leon v1.20 — regression test: booking is deliberate and guarded. */
+/* Padel Booking Leon v1.21 — regression test: booking is deliberate and guarded. */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync('chrome-extension/wansport-booking.js','utf8');
 new vm.Script(source,{filename:'wansport-booking.js'});
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-assert.equal(manifest.version,'1.20.0');
+assert.equal(manifest.version,'1.21.0');
 const wansport=manifest.content_scripts.find(s=>s.js.includes('wansport-booking.js'));
 assert.ok(wansport&&wansport.js.includes('wansport-handoff.js'));
 assert.deepEqual(wansport.matches.sort(),[
