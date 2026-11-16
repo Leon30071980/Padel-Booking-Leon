@@ -8,7 +8,7 @@
 function getBookingPreflight(input){
   if(!input||typeof input!=='object')throw Error('Campo da prenotare mancante.');
   const clubId=String(input.club_id||'');
-  if(!['gunners','pro','puntog'].includes(clubId))
+  if(!['gunners','pro','puntog','donbosco','inzani'].includes(clubId))
     throw Error('Per questo centro utilizzare la verifica Playtomic sul browser.');
   const date=dateCheck_(input.date);
   if(date<romeToday_())throw Error('La data di prenotazione è nel passato.');
