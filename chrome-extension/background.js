@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.20 · MV3: Playtomic solo GET, senza cookie o password. */
+/* Padel Booking Leon v1.21 · MV3: Playtomic solo GET, senza cookie o password. */
 'use strict';
 const CHANNEL='pbl-playtomic-chrome-v1';
 const ORIGIN='https://leon30071980.github.io';
@@ -76,7 +76,9 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
 const WS_HOSTS=Object.freeze({
  gunners:'gunnerspadel.wansport.com',
  pro:'propadelclub.wansport.com',
- puntog:'puntogpadel.wansport.com'
+ puntog:'puntogpadel.wansport.com',
+ donbosco:'pgsdonbosco.wansport.com',
+ inzani:'circoloinzani.wansport.com'
 });
 function validHandoff(value){
  if(!value||typeof value!=='object'||!Object.hasOwn(WS_HOSTS,value.club_id))return null;
