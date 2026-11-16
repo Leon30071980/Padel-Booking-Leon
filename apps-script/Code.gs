@@ -1,14 +1,16 @@
 /**
- * Padel Booking Leon — v1.20 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.21 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
- * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G da validare.
+ * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G/Don Bosco/Inzani da validare.
  */
-const PBL_VERSION = 'v1.20';
+const PBL_VERSION = 'v1.21';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
   {id:'pro', name:'Pro Padel Club', platform:'Wansport', url:'https://propadelclub.wansport.com/start'},
   {id:'puntog', name:'Punto G Padel', platform:'Wansport', url:'https://puntogpadel.wansport.com/start'},
+  {id:'donbosco', name:'PGS Don Bosco Basilicanova · Padel', platform:'Wansport', url:'https://pgsdonbosco.wansport.com/start'},
+  {id:'inzani', name:'Circolo Inzani · Padel', platform:'Wansport', url:'https://circoloinzani.wansport.com/start'},
   {id:'hero', name:'Padel Hero Parma', platform:'Playtomic', url:'https://playtomic.com/clubs/padel-hero-parma'}
 ]);
 const PBL_HEADERS = Object.freeze({
@@ -120,7 +122,7 @@ function fullClubs_(){
     return {...c, priority:Number(r.priority)||i+1, enabled:r.enabled!=='false',
       rule_type:r.rule_type||'unknown',advance_value:r.advance_value?Number(r.advance_value):null,
       release_time:r.release_time||'00:01',
-      connector:c.id==='gunners' ? gunnersConnectionStatus_() : (c.id==='pro'||c.id==='puntog') ? extraConnStatus_(c.id) : c.id==='hero' ? playtomicConnectionStatus_() : {ready:false,configured:false,booking_ready:false,reason:'Connettore non disponibile'}};
+      connector:c.id==='gunners' ? gunnersConnectionStatus_() : ['pro','puntog','donbosco','inzani'].includes(c.id) ? extraConnStatus_(c.id) : c.id==='hero' ? playtomicConnectionStatus_() : {ready:false,configured:false,booking_ready:false,reason:'Connettore non disponibile'}};
   }).sort((a,b)=>a.priority-b.priority);
 }
 function setupApp(){
@@ -178,7 +180,7 @@ function normalizeRequest_(payload){
   if(![60,90,120].includes(duration))throw Error('Durata non prevista.');
   const tolerance=integer_(payload.tolerance,0,60,'Tolleranza');
   if(![0,15,30,60].includes(tolerance))throw Error('Tolleranza non prevista.');
-  if(!Array.isArray(payload.clubs)||!payload.clubs.length||payload.clubs.length>4)throw Error('Selezionare almeno un centro.');
+  if(!Array.isArray(payload.clubs)||!payload.clubs.length||payload.clubs.length>PBL_CLUBS.length)throw Error('Selezionare almeno un centro.');
   const clubs=[...new Set(payload.clubs)];
   clubs.forEach(id=>findClub_(id));
   const mode=payload.mode||'notify';
@@ -253,7 +255,7 @@ function recalculate_(clubId){
 /** Unifica la ricerca di sola lettura senza mai eseguire operazioni di prenotazione. */
 function searchClubAvailability_(id,request){
   if(id==='gunners')return searchGunners_(request);
-  if(id==='pro'||id==='puntog')return searchExtraWansport_(id,request);
+  if(['pro','puntog','donbosco','inzani'].includes(id))return searchExtraWansport_(id,request);
   if(id==='hero')return searchPlaytomic_(request);
   return {club_id:id,status:'not_configured',slots:[],
     reason:'Connettore non disponibile.'};
