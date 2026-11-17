@@ -15,4 +15,4 @@ for(const file of ['index.html','github-pages/index.html','apps-script/Index.htm
  const html=fs.readFileSync(file,'utf8');
  for(const id of ['resultCover','resultSort','expandResults','collapseResults','resultsSummary','componentStatus'])assert.ok(html.includes('id="'+id+'"'),file+' '+id);
 }
-console.log('v1.26: gruppi, prezzi noti, filtri e ordinamento verificati.');
+console.log('v1.27: gruppi, prezzi noti, filtri e ordinamento verificati.');

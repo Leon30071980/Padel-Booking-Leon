@@ -1,14 +1,23 @@
-/* Padel Booking Leon v1.26 · Ponte solo su GitHub Pages, senza token e cookie. */
+/* Padel Booking Leon v1.27 · Ponte solo su GitHub Pages, senza token e cookie. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
  if(location.origin!==ORIGIN||!location.pathname.startsWith('/Padel-Booking-Leon/'))return;
  function post(kind,payload){window.postMessage(Object.assign({channel:CHANNEL,kind},payload||{}),ORIGIN);}
+ chrome.runtime.onMessage.addListener(msg=>{
+  if(msg?.channel===CHANNEL&&msg.kind==='hero-imported')post('hero-imported',{data:msg.data});
+ });
  window.addEventListener('message',event=>{
   if(event.source!==window||event.origin!==ORIGIN)return;
   const msg=event.data;
   if(!msg||msg.channel!==CHANNEL)return;
-  if(msg.kind==='ping'){post('ready',{version:'v1.26',features:['wansport-handoff','playtomic-assisted']});return;}
+  if(msg.kind==='ping'){post('ready',{version:'v1.27',features:['wansport-handoff','playtomic-assisted','hero-visible-import']});return;}
+  if(['hero-open','hero-pull'].includes(msg.kind)&&Number.isSafeInteger(msg.id)&&msg.id>0){
+   chrome.runtime.sendMessage({channel:CHANNEL,kind:msg.kind,payload:msg.payload},result=>{
+    const err=chrome.runtime.lastError;
+    post('hero-result',{id:msg.id,ok:!err&&result?.ok===true,data:result?.data??null,error:err?.message||result?.error||''});
+   });return;
+  }
   if(msg.kind==='handoff'&&Number.isSafeInteger(msg.id)&&msg.id>0&&msg.payload&&typeof msg.payload==='object'){
    chrome.runtime.sendMessage({channel:CHANNEL,kind:'handoff',payload:msg.payload},result=>{
     const err=chrome.runtime.lastError;
@@ -29,5 +38,5 @@
    });
   }catch(err){post('result',{id:msg.id,ok:false,error:String(err.message||err).slice(0,220)});}
  });
- post('ready',{version:'v1.26',features:['wansport-handoff','playtomic-assisted']});
+ post('ready',{version:'v1.27',features:['wansport-handoff','playtomic-assisted','hero-visible-import']});
 })();

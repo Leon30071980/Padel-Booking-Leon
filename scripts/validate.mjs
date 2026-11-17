@@ -5,9 +5,9 @@ const read = (path) => fs.readFileSync(path, 'utf8');
 const files=['Code.gs','Gunners.gs','WansportExtra.gs','Playtomic.gs','CourtDetails.gs','WansportQuotes.gs','BookingPreflight.gs','Index.html','Styles.html','Client.html','Bridge.html','appsscript.json'];
 for (const f of files) assert.ok(fs.statSync('apps-script/'+f).size>20, f+' assente o vuoto');
 const code=read('apps-script/Code.gs');
-assert.match(code,/PBL_VERSION\s*=\s*'v1\.26'/);
-assert.match(read('github-pages/index.html'),/v1\.26/);
-assert.match(read('apps-script/Client.html'),/v1\.26/);
+assert.match(code,/PBL_VERSION\s*=\s*'v1\.27'/);
+assert.match(read('github-pages/index.html'),/v1\.27/);
+assert.match(read('apps-script/Client.html'),/v1\.27/);
 assert.match(read('apps-script/Index.html'),/<\?= version \?>/);
 const manifest=JSON.parse(read('apps-script/appsscript.json'));
 assert.equal(manifest.timeZone,'Europe/Rome');
@@ -66,7 +66,7 @@ for (const f of files) {
  assert.doesNotMatch(content,/-----BEGIN (?:RSA|OPENSSH|EC|PRIVATE) KEY-----/);
  assert.doesNotMatch(content,/ghp_[A-Za-z0-9]{20,}/);
 }
-console.log('v1.26: 12 file Apps Script, manifest, versione e verifiche di base OK.');
+console.log('v1.27: 12 file Apps Script, manifest, versione e verifiche di base OK.');
 
 assert.match(read('chrome-extension/manifest.json'),/wansport-booking\.js/);
 assert.match(read('chrome-extension/wansport-booking.js'),/Imposta durata e privacy/);

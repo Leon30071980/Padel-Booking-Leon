@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.26 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.27 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -10,7 +10,7 @@
   let bookingSelection=null;
   let bookingCheckSerial=0;
   let toastTimer;
-  let heroProbe=null,heroSnapshot=null,lastSearchRequest=null;
+  let heroProbe=null,heroSnapshot=null,lastSearchRequest=null,heroPending=null,heroPullBusy=false;
   state.heroPhase='waiting';
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
@@ -56,7 +56,7 @@
     });
   }
   function heroCandidates(snapshot,req,now=Date.now()){
-    const base={club_id:'hero',status:'manual_required',slots:[],reason:'Aprire il calendario ufficiale e importare gli intervalli bianchi visivamente verificati.'};
+    const base={club_id:'hero',status:'manual_required',slots:[],reason:'Aprire Playtomic, selezionare il giorno richiesto e premere Importa disponibilità in Leon.'};
     if(!snapshot||snapshot.date!==req.date||!Number.isFinite(snapshot.at)||now-snapshot.at>10*60000||now<snapshot.at)return base;
     const target=heroMinutes(req.time),duration=Number(req.duration),tolerance=Number(req.tolerance);
     if(!Number.isFinite(target)||![60,90,120].includes(duration)||![0,15,30,60].includes(tolerance))return base;
@@ -74,18 +74,63 @@
     const slots=[...out.values()].sort((a,b)=>Math.abs(heroMinutes(a.start)-target)-Math.abs(heroMinutes(b.start)-target)||
       a.start.localeCompare(b.start)||a.court.localeCompare(b.court,'it')).slice(0,30);
     return {...base,status:slots.length?'available':'manual_required',slots,manual:true,
-      reason:slots.length?'Fasce candidate ricavate da celle selezionate o intervalli inseriti a mano; data, durata, prezzo e prenotabilità da confermare su Playtomic.':
-      'Nessuna corrispondenza negli intervalli inseriti: il calendario completo non è stato verificato.'};
+      reason:slots.length?(snapshot.visible?'Fasce lette dal calendario visibile Playtomic; prezzi e disponibilità da riconfermare sul portale.'+(snapshot.unrecognized?' Alcune offerte non riconosciute: '+snapshot.unrecognized+'.':''):'Fasce candidate inserite manualmente; da confermare sul portale.'):
+      (snapshot.visible?'Nessuna fascia compatibile riconosciuta ('+Number(snapshot.seen||0)+' offerte visibili esaminate); il calendario intero non è verificato.':'Nessuna corrispondenza nelle fasce acquisite: il calendario completo non è stato verificato.')};
   }
   function heroStatus(){
     if(heroProbe)return 'Verifica estensione Chrome in corso…';
     if(state.heroPhase==='missing')return 'Lettura assistita · estensione non rilevata';
-    return 'Lettura assistita · calendario da verificare sul portale';
+    if(heroSnapshot?.visible&&Date.now()-heroSnapshot.at<600000)return 'Calendario del '+prettyDate(heroSnapshot.date)+' importato · da riconfermare';
+    return window.PBL_CHROME?.heroCapable?.()?'Importazione dal calendario visibile · un clic':'Aggiornare l’estensione Chrome v1.27';
+  }
+  function currentHeroRequest(){
+    return {date:$('searchDate').value,time:$('searchTime').value,duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value)};
+  }
+  function heroFresh(req){
+    return heroSnapshot&&heroSnapshot.date===req.date&&Date.now()-heroSnapshot.at<=600000&&(!heroSnapshot.visible||
+      heroSnapshot.request?.time===req.time&&heroSnapshot.request?.duration===req.duration&&heroSnapshot.request?.tolerance===req.tolerance);
+  }
+  async function openHeroCalendar(req=currentHeroRequest()){
+    if(!req.date||!req.time){toast('Imposti data, orario e durata.',true);return;}
+    if(!window.PBL_CHROME?.heroOpen){openHeroImport();return;}
+    if(heroPending&&heroPending.opening&&heroPending.req.date===req.date&&heroPending.req.time===req.time&&heroPending.req.duration===req.duration&&heroPending.req.tolerance===req.tolerance)return;
+    const key=crypto.randomUUID();
+    heroPending={key,req,opening:true,completed:false};heroSnapshot=null;
+    try{
+      await window.PBL_CHROME.heroOpen({...req,key});
+      if(heroPending?.key===key)toast('Playtomic aperto: selezioni '+prettyDate(req.date)+' e prema Importa disponibilità in Leon.');
+    }catch(e){
+      if(heroPending?.key===key){heroPending=null;toast(e.message,true);openHeroImport();}
+    }finally{if(heroPending?.key===key)heroPending.opening=false;}
+  }
+  function receiveHero(data){
+    if(!heroPending||!data||data.key!==heroPending.key||data.date!==heroPending.req.date||!Array.isArray(data.lines)||
+      !Number.isFinite(data.at)||Date.now()-data.at>600000||data.at>Date.now()+2000)return;
+    if(heroPending.completed&&heroSnapshot?.at===data.at)return;
+    try{
+      const ranges=data.lines.length?parseHeroRanges(data.lines.join('\n'),data.date):[];
+      if(ranges.some(r=>!r.exact))throw Error('Formato fascia non valido.');
+      heroSnapshot={date:data.date,at:data.at,ranges,visible:true,request:heroPending.req,seen:data.seen,unrecognized:data.unrecognized};
+      heroPending.completed=true;
+      if(state.lastResults.some(r=>r.club_id==='hero')&&lastSearchRequest&&heroFresh(lastSearchRequest)){
+        state.lastResults=state.lastResults.map(r=>r.club_id==='hero'?heroCandidates(heroSnapshot,lastSearchRequest):r);
+        renderResults();
+      }else if(!$('searchBtn').disabled){
+        lastSearchRequest=heroPending.req;state.lastResults=state.lastResults.filter(r=>r.club_id!=='hero').concat(heroCandidates(heroSnapshot,lastSearchRequest));renderResults();
+      }
+      if($('heroImportDialog').open)$('heroImportDialog').close();
+      renderClubs();toast(ranges.length?ranges.length+' fasce Playtomic importate automaticamente.':'Nessuna fascia compatibile riconosciuta; verifichi il calendario.');
+    }catch(e){toast('Importazione Playtomic non riuscita: '+e.message,true);}
+  }
+  async function pullHero(){
+    if(heroPullBusy||!heroPending||!window.PBL_CHROME?.heroPull)return;
+    heroPullBusy=true;
+    try{receiveHero(await window.PBL_CHROME.heroPull());}catch{}finally{heroPullBusy=false;}
   }
   function openHeroImport(){
     const req=lastSearchRequest||{date:$('searchDate').value,time:$('searchTime').value,duration:$('searchDuration').value,tolerance:$('searchTolerance').value};
     $('heroDate').value=req.date;$('heroRanges').value='';$('heroConfirm').checked=false;
-    $('heroImportNote').textContent='Controlli sul sito la data '+prettyDate(req.date)+' e incolli le fasce copiate dal diagnostico, oppure inserisca gli intervalli bianchi continui. Nessun prezzo è stimato.';
+    $('heroImportNote').textContent='Modalità manuale di riserva. Per il trasferimento automatico aggiorni Chrome v1.27 e apra la ricerca Playtomic da Leon.';
     $('heroImportDialog').showModal();
   }
   function saveHeroImport(e){
@@ -115,7 +160,7 @@
       <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
       <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
       <div class="club-actions"><button type="button" class="btn btn-outline" data-edit-club="${esc(c.id)}">⚙ Regole</button><a class="btn btn-outline" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">↗ Sito</a></div>
-      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">Importa fasce Playtomic</button>'}</article>`;
+      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">Cerca su Playtomic ↗</button>'}</article>`;
     }).join('');
     choices('searchClubChoices');choices('jobClubChoices');
   }
@@ -230,7 +275,7 @@
       const status={available:'Slot compatibili',manual_required:'Verifica assistita',no_slots:'Nessuna fascia',outside_window:'Fuori finestra',auth_required:'Accesso richiesto',error:'Errore di lettura',not_configured:'Non collegato'}[r.status]||'Da verificare';
       if(!entries.length){
         const message=all.length?'Nessuna fascia con il filtro scelto':status;
-        return '<div class="result-empty"><div class="group-name"><strong>'+name+'</strong><small>'+esc(all.length?all.length+' fasce nascoste dal filtro':r.reason)+'</small></div><span>'+esc(message)+'</span>'+(r.club_id==='hero'?'<button type="button" class="mini-button" data-playtomic-test="hero">Importa fasce</button>':'')+'<a target="_blank" rel="noopener noreferrer" href="'+esc(club?.url||'#')+'">Portale ↗</a></div>';
+        return '<div class="result-empty"><div class="group-name"><strong>'+name+'</strong><small>'+esc(all.length?all.length+' fasce nascoste dal filtro':r.reason)+'</small></div><span>'+esc(message)+'</span>'+(r.club_id==='hero'?'<button type="button" class="mini-button" data-playtomic-test="hero">Apri ricerca Playtomic ↗</button>':'')+'<a target="_blank" rel="noopener noreferrer" href="'+esc(club?.url||'#')+'">Portale ↗</a></div>';
       }
       const venues=new Map();
       for(const item of entries){
@@ -265,10 +310,10 @@
     const el=$('componentStatus');if(!el)return;
     const backend=state.backendVersion||'non verificato';
     const extension=window.PBL_CHROME?.version?.()||'non rilevata';
-    el.textContent='Frontend v1.26 · Google '+backend+' · Chrome '+extension+
-      (backend!=='v1.26'?' · verificare il deployment Google':'')+
-      (!['v1.24','v1.25','v1.26'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
-    el.dataset.warning=String(backend!=='v1.26'||!['v1.24','v1.26'].includes(extension));
+    el.textContent='Frontend v1.27 · Google '+backend+' · Chrome '+extension+
+      (backend!=='v1.27'?' · verificare il deployment Google':'')+
+      (!['v1.24','v1.25','v1.26','v1.27'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
+    el.dataset.warning=String(backend!=='v1.27'||!['v1.24','v1.27'].includes(extension));
   }
 
   function getBookingSlot(clubId,courtId,start){
@@ -417,14 +462,15 @@
       const req={date:$('searchDate').value,time:$('searchTime').value,
         duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value)};
       const otherClubs=clubs.filter(id=>id!=='hero');
-      // Nessuna richiesta a Playtomic: usa solo gli intervalli forniti dall’utente.
+      // Chrome apre il calendario ufficiale soltanto per una ricerca richiesta dall’utente.
       lastSearchRequest=req;
-      const work=clubs.map(id=>id==='hero'?Promise.resolve(heroCandidates(heroSnapshot,req)):Promise.resolve(null));
+      if(clubs.includes('hero')&&!heroFresh(req)){
+        heroSnapshot=null;
+        openHeroCalendar(req);
+      }else if(!clubs.includes('hero'))heroPending=null;
       const remote=otherClubs.length?await api('searchAvailability',{...req,clubs:otherClubs}):{results:[]};
-      const heroResults=await Promise.all(work);
-
       const remoteById=new Map(remote.results.map(r=>[r.club_id,r]));
-      const hero=heroResults.find(r=>r&&r.club_id==='hero');
+      const hero=clubs.includes('hero')?heroCandidates(heroFresh(req)?heroSnapshot:null,req):null;
       const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
       if(clubs.includes('hero'))renderClubs();
       state.lastResults=results;
@@ -607,7 +653,7 @@
       if(t.dataset.detail)detail(t.dataset.detail);
       if(t.dataset.cancel)cancel(t.dataset.cancel);
       if(t.dataset.probe)probe(t.dataset.probe);
-      if(t.dataset.playtomicTest)openHeroImport();
+      if(t.dataset.playtomicTest)openHeroCalendar(lastSearchRequest||currentHeroRequest());
       if(t.dataset.connectWansport)showWansport(t.dataset.connectWansport);
       if(t.dataset.close)$(t.dataset.close).close();
     });
@@ -615,6 +661,9 @@
       $('autoWarning').classList.toggle('hidden',document.querySelector('input[name="jobMode"]:checked').value!=='auto');
     }));
     document.addEventListener('pbl-chrome-ready',()=>{state.heroPhase='assisted';renderComponentStatus();if(state.clubs.length)renderClubs();});
+    document.addEventListener('pbl-hero-imported',e=>receiveHero(e.detail));
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)pullHero();});
+    window.addEventListener('focus',pullHero);
     document.addEventListener('pbl-backend-connected',loadAll);
     loadAll();
     probePlaytomic();

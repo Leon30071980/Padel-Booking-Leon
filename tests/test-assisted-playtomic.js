@@ -20,7 +20,7 @@ assert.doesNotMatch(source,/PBL_CHROME\.query/);
 assert.match(source,/candidate Playtomic da confermare/);
 assert.match(source,/loadAll\(\);\s*probePlaytomic\(\);/);
 for(const file of ['index.html','github-pages/index.html'])assert.match(fs.readFileSync(file,'utf8'),/id="heroImportForm"/);
-console.log('v1.26: candidati assistiti, date e durata, scadenza e assenza di lettura API verificati.');
+console.log('v1.27: candidati assistiti, date e durata, scadenza e assenza di lettura API verificati.');
 
 const exact={date:req.date,at:1000000,ranges:ctx.parseHeroRanges('Campo 6 INDOOR;19:15;20:45;coperto;slot',req.date)};
 const exactReq={...req,time:'19:15',tolerance:30};
@@ -29,4 +29,11 @@ assert.equal(exactResult.slots.length,1);assert.equal(exactResult.slots[0].start
 assert.equal(ctx.heroCandidates(exact,{...exactReq,duration:60},1000010).slots.length,0);
 assert.throws(()=>ctx.parseHeroRanges('Campo 6;19:00;19:30;;slot',req.date));
 assert.throws(()=>ctx.parseHeroRanges('Campo 6;19:00;20:30;;other',req.date));
-console.log('v1.26: importazione della fascia selezionata con durata esatta.');
+console.log('v1.27: importazione della fascia selezionata con durata esatta.');
+
+assert.match(source,/heroOpen\(\{\.\.\.req,key\}\)/);
+assert.match(source,/pbl-hero-imported/);
+assert.match(source,/data\.key!==heroPending\.key/);
+assert.match(source,/heroCandidates\(heroFresh\(req\)\?heroSnapshot:null,req\)/);
+assert.match(source,/visibilitychange/);
+console.log('v1.27: acquisizione diretta e filtro delle richieste obsolete.');

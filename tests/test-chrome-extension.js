@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'1.26.0');
+assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'1.27.0');
 assert.deepEqual(manifest.host_permissions,[]);assert.equal(manifest.content_scripts.length,3);
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('wansport-booking.js')));
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('playtomic-inspector.js')));
@@ -14,7 +14,7 @@ assert.equal(result.ok,false);assert.match(result.error,/sospeso/);assert.equal(
 const inspector=fs.readFileSync('chrome-extension/playtomic-inspector.js','utf8');
 new vm.Script(inspector);assert.doesNotMatch(inspector,/\bfetch\s*\(|XMLHttpRequest|\.click\s*\(/);
 assert.match(inspector,/e.key!=='F8'/);assert.match(inspector,/navigator.clipboard.writeText\(report\)/);
-console.log('Chrome v1.26: API disattivata e diagnostica manuale in sola lettura.');
+console.log('Chrome v1.27: API disattivata e diagnostica manuale in sola lettura.');
 
 const helper=inspector.slice(inspector.indexOf(' function safeSlotValue('),inspector.indexOf(' const controls='));
 const hc=vm.createContext({String,Number,Math});
@@ -28,7 +28,7 @@ assert.equal(hc.makeSlotLine({time:'20:30',duration:'5400',sport:'PADEL'},'CAMPO
 assert.equal(hc.makeSlotLine({time:'20:30',duration:'90',sport:'TENnis'},'CAMPO 6'),'');
 assert.match(inspector,/target\.closest\('\[data-slot-id\]/);
 assert.doesNotMatch(inspector,/getAttribute\('data-slot-id'\)/);
-console.log('v1.26: metadati ammessi e copia di una singola fascia.');
+console.log('v1.27: metadati ammessi e copia di una singola fascia.');
 
 assert.equal(hc.normalizedCourt('CAMPO 6 INDO...').number,6);
 assert.equal(hc.normalizedCourt('CAMPO 12 INDOOR').cover,'coperto');
@@ -37,3 +37,22 @@ assert.equal(hc.normalizedCourt('CAMPO 13'),null);
 assert.equal(hc.normalizedCourt('CAMPO 4 Seven...').cover,'');
 assert.match(inspector,/verified\.checked\?makeSlotLine/);
 assert.match(inspector,/choose\.value=info\?String\(info\.number\):''/);
+
+assert.equal(hc.makeSlotLine({time:'21:30',duration:'90',sport:'PADEL'},'CAMPO 11 INDOOR'),'CAMPO 11 INDOOR;21:30;23:00;coperto;slot');
+assert.match(inspector,/auto\.onclick=async/);
+assert.match(inspector,/window\.confirm/);
+assert.match(inspector,/visibleHeroLines\(document,request\)/);
+assert.match(source,/hero-imported/);
+assert.match(source,/pbl_hero_request_/);
+assert.match(source,/msg\.payload\?\.date!==req\.date/);
+assert.match(source,/heroSender\(sender\)/);
+assert.match(source,/heroLines\(msg\.payload\.lines,req\)/);
+const key='12345678-1234-1234-1234-123456789abc';
+const rq={key,date:'2099-11-18',time:'21:30',duration:90,tolerance:30};
+assert.ok(ctx.heroRequest(rq));
+assert.equal(ctx.heroRequest({...rq,date:'2099-02-30'}),null);
+assert.equal(ctx.heroLines(['CAMPO 11 INDOOR;21:30;23:00;coperto;slot'],rq).length,1);
+assert.equal(ctx.heroLines(['CAMPO 11 INDOOR;21:30;22:30;coperto;slot'],rq),null);
+assert.equal(ctx.heroLines(['CAMPO 11 INDOOR;19:30;21:00;coperto;slot'],rq),null);
+assert.equal(ctx.heroLines(['CAMPO 13;21:30;23:00;;slot'],rq),null);
+console.log('v1.27: trasferimento locale della singola richiesta con verifica di origine, data e durata.');

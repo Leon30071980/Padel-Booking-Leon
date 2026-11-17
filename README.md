@@ -1,3 +1,11 @@
+# Padel Booking Leon — v1.27
+
+## Playtomic: trasferimento locale in un clic
+
+Da Leon avviare la ricerca con Padel Hero selezionato. L'estensione apre il calendario ufficiale e mostra la data richiesta. Sul portale selezionare il giorno e, terminato il caricamento, premere «Importa disponibilità in Leon» e confermare la data. Vengono trasferite alla scheda Leon le fasce compatibili già visualizzate (orario, durata e campo), senza copia/incolla. I prezzi sono da riconfermare. Non vengono richiesti dati di sessione o API Playtomic. Se nessuna fascia è riconosciuta non si conclude che il calendario completo sia esaurito. La lettura è locale, attivata dall'utente, non ripetuta in background. Wansport invariato.
+
+---
+
 # Padel Booking Leon — v1.26
 
 Per una singola fascia Playtomic selezionata manualmente, il diagnostico tenta il riconoscimento del numero del campo cercando soltanto nella parte sinistra della stessa riga, anche se il titolo è troncato. Se non è riconosciuto, selezionare Campo 1–12 dal menu. Confermare il campo e la fascia visibili prima di copiare. La copertura rimane sconosciuta se non è identificabile. Nessuna scansione automatica, API o lettura dei valori identificativi della fascia. Wansport invariato.
