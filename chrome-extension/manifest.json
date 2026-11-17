@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Padel Booking Leon - Playtomic e Wansport",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "description": "Disponibilità Playtomic e prenotazione assistita su Pro Padel Wansport con conferma esplicita.",
   "host_permissions": [
     "https://playtomic.com/*"

@@ -1,4 +1,4 @@
-/* v1.21 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
+/* v1.22 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
@@ -38,7 +38,7 @@
  }
  async function handoff(details){
   if(!ready && !(await probe()))throw Error('Estensione Chrome non rilevata. Aggiorni il repository, ricarichi l’estensione e aggiorni questa pagina.');
-  if(!capabilities.has('wansport-handoff'))throw Error('L’estensione Chrome '+(extensionVersion||'installata')+' non supporta la guida Wansport. Esegua Pull origin in GitHub Desktop, poi Ricarica in chrome://extensions e Ctrl+F5 su questa pagina.');
+  if(extensionVersion!=='v1.22'||!capabilities.has('wansport-handoff'))throw Error('L’estensione Chrome '+(extensionVersion||'installata')+' non supporta la guida Wansport. Esegua Pull origin in GitHub Desktop, poi Ricarica in chrome://extensions e Ctrl+F5 su questa pagina.');
   const id=++serial;
   return new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>{pending.delete(id);reject(Error('L’estensione non ha aperto Wansport entro 15 secondi.'));},15000);
@@ -46,7 +46,7 @@
    send('handoff',{id,payload:details});
   });
  }
- window.PBL_CHROME={installed,probe,query,handoff};
+ window.PBL_CHROME={installed,probe,query,handoff,version:()=>extensionVersion};
  send('ping');
  document.addEventListener('DOMContentLoaded',()=>send('ping'));
 })();

@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.21 — assistente prenotazione Pro Padel su Wansport.
+/* Padel Booking Leon v1.22 — assistente prenotazione Pro Padel su Wansport.
  * Opera soltanto nella scheda Wansport scelta dall'utente. Nessuna chiamata
  * di rete, nessuna prenotazione senza clic e conferma espliciti dell'utente.
  * NON tenta pagamenti online; fallisce in modo sicuro se il DOM è ambiguo.
@@ -126,9 +126,10 @@
   }
   function render(){
     if(!host||!modal||submitted)return;
+    if(alreadySent()){bookButton.disabled=true;prepButton.disabled=true;label('Tentativo già registrato in questa scheda. Verifichi direttamente sul portale.','warning');return;}
     const s=identity(modal);
-    const privateOk=s.privacy===true||privacyManual===true;
-    const ready=prepared&&s.dateOk&&s.courtOk&&s.startOk&&s.endOk&&
+    const privateOk=s.privacy===true||(s.privacy==null&&privacyManual===true);
+    const ready=!alreadySent()&&prepared&&s.dateOk&&s.courtOk&&s.startOk&&s.endOk&&
       !!s.price&&privateOk&&!!s.action&&!s.action.disabled;
     summary.textContent='Campo: '+info.court+'\n'+info.date+' · '+info.start+'–'+info.end+
       ' · '+info.duration+' min\nCosto Wansport: '+(s.price||'da verificare');
@@ -168,11 +169,14 @@
     label('Verifica aggiornamento durata e modalità privata nel riepilogo Wansport…');
     setTimeout(render,450);
   }
+  function attemptKey(){return 'pbl-booking-v1:'+info.club_id+':'+info.court_id+':'+info.date+':'+info.start+':'+info.duration;}
+  function alreadySent(){try{return !!sessionStorage.getItem(attemptKey());}catch(e){return true;}}
   function finalBooking(){
     if(submitted||!modal)return;
+    if(alreadySent()){label('Tentativo già inviato o protezione non disponibile. Verifichi le prenotazioni sul portale; nessun nuovo invio.','warning');bookButton.disabled=true;return;}
     const s=identity(modal);
     if(!prepared||!s.dateOk||!s.courtOk||!s.startOk||!s.endOk||!s.price||
-       !(s.privacy===true||privacyManual)||!s.action||s.action.disabled){
+       !(s.privacy===true||(s.privacy==null&&privacyManual))||!s.action||s.action.disabled){
       render();return;
     }
     const message='Confermare la prenotazione reale su Wansport?\n\n'+
@@ -186,8 +190,9 @@
     const latest=identity(modal);
     if(!latest.dateOk||!latest.courtOk||!latest.startOk||!latest.endOk||
       latest.price!==s.price||latest.action!==s.action||
-      !(latest.privacy===true||privacyManual)||latest.action.disabled)
+      !(latest.privacy===true||(latest.privacy==null&&privacyManual))||latest.action.disabled)
       return void label('I dati sono cambiati. Nessun invio: ripeta la verifica.','warning');
+    try{sessionStorage.setItem(attemptKey(),new Date().toISOString());}catch(e){label('Impossibile attivare la protezione contro invii doppi. Nessun invio.','warning');return;}
     submitted=true;
     prepButton.disabled=true;bookButton.disabled=true;manualBox.disabled=true;
     latest.action.click();
@@ -197,9 +202,9 @@
   function checkResult(){
     if(!submitted)return;
     // Non dedurre l'esito dalla sola chiusura della finestra: potrebbe esserci un errore.
-    const shown=clean(text(document.body).slice(-6000));
+    const shown=[...document.querySelectorAll('[role="alert"],[role="status"],.alert,.toast,.swal2-popup')].filter(visible).map(n=>clean(text(n))).join(' ');
     if(/prenotazione (?:effettuata|confermata|completata|inserita)|prenotazione (?:avvenuta|eseguita) con successo/.test(shown)){
-      label('Wansport mostra una conferma di prenotazione. Controlli il riepilogo sul portale.','ok');
+      label('Wansport mostra un possibile esito positivo. Verifichi la prenotazione nella sua area personale.','ok');
     }else if(/prenotazione (?:non riuscita|fallita)|errore (?:durante|nella) prenotazione/.test(shown)){
       label('Wansport segnala un errore. Verifichi le prenotazioni prima di qualsiasi nuovo tentativo.','warning');
     }
@@ -224,7 +229,7 @@
     close.title='Chiudi assistente prenotazione';close.onclick=()=>{
       dismissed=true;host.remove();host=null;restoreGuide();
     };
-    const h=document.createElement('h3');h.textContent='🎾 Padel Booking Leon · v1.21';
+    const h=document.createElement('h3');h.textContent='🎾 Padel Booking Leon · v1.22';
     const intro=document.createElement('small');
     intro.textContent='Prenotazione assistita su Pro Padel. Prima la durata, poi conferma esplicita.';
     summary=document.createElement('pre');

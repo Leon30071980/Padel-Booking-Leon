@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.19 — browser bridge: no public credentials or API tokens. */
+/* Padel Booking Leon v1.22 — browser bridge: no public credentials or API tokens. */
 (function(){
   'use strict';
   const CHANNEL='pbl-google-bridge-v1';
@@ -13,7 +13,7 @@
   ]);
   let url=localStorage.getItem(STORE)||'';
   let iframe=null, nonce='', remoteWindow=null, remoteOrigin='', connecting=null;
-  let nextId=0;
+  let nextId=0,backendVersion='';
   const pending=new Map();
   const $=id=>document.getElementById(id);
   function validUrl(candidate){
@@ -50,7 +50,7 @@
   }
   function reset(message){
     for(const [id,p] of pending){clearTimeout(p.timer);p.reject(Error('Collegamento Google interrotto.'));pending.delete(id);}
-    remoteWindow=null;remoteOrigin='';
+    remoteWindow=null;remoteOrigin='';backendVersion='';
     if(iframe){iframe.remove();iframe=null;}
     connecting=null;
     if(message)setStatus(message,false);
@@ -96,7 +96,7 @@
     // Il nonce casuale impedisce a un iframe Google estraneo di spacciarsi per il ponte.
     if(!validGoogleOrigin(event.origin))return;
     if(msg.kind==='ready'&&iframe){
-      remoteWindow=event.source;
+      backendVersion=String(msg.version||'');remoteWindow=event.source;
       remoteOrigin=event.origin;
       setStatus('Google collegato',true);
       if(connectDone){const cb=connectDone;connectDone=null;cb();}
@@ -143,7 +143,7 @@
         .finally(()=>{$('bridgeConnectBtn').disabled=false;if(remoteWindow)document.dispatchEvent(new CustomEvent('pbl-backend-connected'));});
     });
   }
-  window.PBL_BACKEND={call,connect,validUrl};
+  window.PBL_BACKEND={call,connect,validUrl,version:()=>backendVersion};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
   else init();
 })();

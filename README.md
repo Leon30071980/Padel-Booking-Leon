@@ -1,3 +1,15 @@
+# Padel Booking Leon — v1.22
+
+## Consolidamento e risultati compatti
+
+Risultati raggruppati per centro, chiusi all'avvio di ogni ricerca; apertura dei gruppi mantenuta durante il caricamento dei preventivi. Sottogruppi per sede, filtri copertura, ordinamento per priorità, orario o prezzo noto, conteggio e prezzo minimo verificabile fra le fasce visibili. Prezzi mancanti e indicativi non sono usati per il minimo. Variante Google diretta con gli stessi gruppi e filtri, senza replicare le funzioni Chrome.
+
+Corretto il ciclo delle richieste: stato concluso quando tutti i tentativi sono conclusi; scadenza dopo l'orario massimo richiesto; richieste con configurazione o connettore da correggere restano recuperabili fino a scadenza. Nessuna cancellazione dei dati. I duplicati pianificati considerano anche tolleranza, modalità e insieme dei centri. Diagnostica frontend/backend/estensione, preflight prima dell'apertura assistita, blocco del doppio clic e protezione da invii ripetuti dopo ricarica della stessa scheda. Prenotazione assistita solo Pro Padel, sempre con conferma esplicita e pagamento al centro; nessun invio automatico cloud.
+
+Aggiornare GitHub Desktop (Pull origin), ricaricare l'estensione Chrome e aggiornare la pagina. Non eseguire nuovamente setupApp. La compatibilità reale dei nuovi portali e il riconoscimento del DOM di prenotazione richiedono collaudo. Il limite di nove preventivi automatici e le richieste sequenziali del backend restano invariati.
+
+---
+
 # Padel Booking Leon — v1.21
 
 ## Nuovi centri Wansport: Don Bosco e Circolo Inzani

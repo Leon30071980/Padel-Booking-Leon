@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.21 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.22 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G/Don Bosco/Inzani da validare.
  */
-const PBL_VERSION = 'v1.21';
+const PBL_VERSION = 'v1.22';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -30,6 +30,7 @@ function doGet(e){
     }
     const t = HtmlService.createTemplateFromFile('Bridge');
     t.nonceJson = JSON.stringify(nonce);
+    t.versionJson = JSON.stringify(PBL_VERSION);
     // Il documento ponte non contiene pulsanti: protegge il canale con
     // controlli di origine, nonce e lista esplicita delle funzioni ammesse.
     return t.evaluate().setTitle('Padel Booking Leon — Google Bridge')
@@ -149,9 +150,40 @@ function setupApp(){
     return {version:PBL_VERSION,spreadsheetUrl:ss.getUrl(),message:'Archivio pronto. Nessuna prenotazione reale abilitata.'};
   });
 }
+// v1.22: conserva lo storico; nessuna cancellazione delle richieste esistenti.
+function requestState_(job,attempts,now){
+  if(job.status!=='pending')return job.status;
+  const rows=attempts.filter(a=>a.request_id===job.id);
+  if(!rows.length)return 'completed_error';
+  let expired=false;
+  try{expired=romeToUtc_(job.match_date,job.match_time).getTime()+Number(job.tolerance||0)*60000<=Date.parse(now);}
+  catch(e){return 'completed_error';}
+  const active=rows.some(a=>['scheduled','waiting_rule','needs_connector'].includes(a.state));
+  if(active&&!expired)return 'pending';
+  const found=rows.some(a=>a.state==='found');
+  const failed=rows.some(a=>['needs_connector','waiting_rule','scheduled','expired','error'].includes(a.state));
+  if(found)return failed||rows.some(a=>a.state==='checked_outside_window')?'completed_partial':'completed_found';
+  if(expired&&active)return 'expired';
+  if(failed)return 'completed_error';
+  if(rows.some(a=>a.state==='checked_no_slots'))return rows.some(a=>a.state==='checked_outside_window')?'completed_partial':'completed_no_slots';
+  if(rows.every(a=>a.state==='checked_outside_window'))return 'completed_outside';
+  return 'completed_error';
+}
+function reconcileRequests_(stamp){
+  const jobs=records_('Requests'),attempts=records_('Attempts');
+  for(const job of jobs.filter(j=>j.status==='pending')){
+    const status=requestState_(job,attempts,stamp);
+    if(status==='pending')continue;
+    for(const a of attempts.filter(a=>a.request_id===job.id&&['scheduled','waiting_rule','needs_connector'].includes(a.state))){
+      updateRow_('Attempts',a.id,{state:'expired',checked_at:stamp,detail:'Finestra temporale conclusa; nessun nuovo controllo.'});
+    }
+    updateRow_('Requests',job.id,{status,updated_at:stamp});
+  }
+}
 function getDashboard(){
   const clubs=fullClubs_(), atts=records_('Attempts');
-  const jobs=records_('Requests').slice(-100).reverse().map(job=>serializeRequest_(job,clubs,atts));
+  const stamp=now_();
+  const jobs=records_('Requests').slice(-100).reverse().map(job=>serializeRequest_({...job,status:requestState_(job,atts,stamp)},clubs,atts));
   return {version:PBL_VERSION,clubs,jobs,schedulerActive:ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='schedulerTick'),
     storage:'Google Sheets privato',liveReady:clubs.some(c=>c.connector.ready)};
 }
@@ -163,7 +195,7 @@ function saveClubRule(payload){
     const patch={priority:integer_(payload.priority,1,50,'Priorità'),enabled:payload.enabled===true?'true':'false',
       rule_type:payload.rule_type,advance_value:'',release_time:timeCheck_(payload.release_time||'00:01')};
     if(payload.rule_type!=='unknown')patch.advance_value=integer_(payload.advance_value,1,1440,'Anticipo');
-    // Permette di configurare i centri aggiunti in v1.21 anche su Sheets esistenti.
+    // Permette di configurare i centri aggiunti in v1.22 anche su Sheets esistenti.
     if(records_('Clubs').some(r=>r.id===payload.id))updateRow_('Clubs',payload.id,patch);
     else {
       const club=findClub_(payload.id);
@@ -202,10 +234,12 @@ function createRequest(payload){
   const r=normalizeRequest_(payload);
   if(r.clubs.includes('hero'))throw Error('Padel Hero richiede Chrome aperto: i controlli programmati dal cloud non sono disponibili.');
   return withLock_(()=>{
+    reconcileRequests_(now_());
     const jobs=records_('Requests');
     if(jobs.filter(j=>j.status==='pending').length>=50)throw Error('Massimo 50 richieste attive.');
     const existing=jobs.find(j=>j.status==='pending'&&j.match_date===r.date&&j.match_time===r.time&&
-      j.duration===String(r.duration)&&j.club_ids===JSON.stringify(r.clubs));
+      j.duration===String(r.duration)&&j.tolerance===String(r.tolerance)&&j.mode===r.mode&&
+      (()=>{try{return JSON.stringify(JSON.parse(j.club_ids).sort())===JSON.stringify([...r.clubs].sort());}catch(e){return false;}})());
     if(existing)throw Error('Esiste già una richiesta equivalente per questa partita.');
     const id=Utilities.getUuid(), stamp=now_(), clubs=fullClubs_();
     append_('Requests',{id,match_date:r.date,match_time:r.time,duration:r.duration,tolerance:r.tolerance,
@@ -232,7 +266,8 @@ function serializeRequest_(r,clubs,attemptRows){
 function getRequestDetail(id){
   const clubs=fullClubs_(), r=records_('Requests').find(x=>x.id===id);
   if(!r)throw Error('Richiesta non trovata.');
-  const j=serializeRequest_(r,clubs);
+  const atts=records_('Attempts');
+  const j=serializeRequest_({...r,status:requestState_(r,atts,now_())},clubs,atts);
   j.events=records_('Events').filter(x=>x.request_id===id).reverse().slice(0,40);
   return j;
 }
@@ -242,7 +277,7 @@ function cancelRequest(id){
     if(!job)throw Error('Richiesta non trovata.');
     if(job.status!=='pending')throw Error('Questa richiesta non può essere annullata.');
     updateRow_('Requests',id,{status:'cancelled',updated_at:now_()});
-    records_('Attempts').filter(a=>a.request_id===id).forEach(a=>updateRow_('Attempts',a.id,{state:'cancelled',detail:'Annullato dall’utente.'}));
+    records_('Attempts').filter(a=>a.request_id===id&&['scheduled','waiting_rule','needs_connector'].includes(a.state)).forEach(a=>updateRow_('Attempts',a.id,{state:'cancelled',detail:'Annullato dall’utente.'}));
     append_('Events',{stamp:now_(),request_id:id,club_id:'',message:'Richiesta annullata.'});
     return {ok:true};
   });
@@ -272,10 +307,12 @@ function searchClubAvailability_(id,request){
  */
 function schedulerTick(){
   return withLock_(()=>{
-    const now=now_(), jobs=records_('Requests').filter(r=>r.status==='pending');
+    const now=now_();
+    reconcileRequests_(now);
+    const jobs=records_('Requests').filter(r=>r.status==='pending');
     let processed=0,found=0;
     const attempts=records_('Attempts').filter(a=>a.state==='scheduled'&&a.open_at&&a.open_at<=now&&
-      jobs.some(j=>j.id===a.request_id)).slice(0,3);
+      jobs.some(j=>j.id===a.request_id)).sort((a,b)=>a.open_at.localeCompare(b.open_at)).slice(0,3);
     for(const a of attempts){
       const job=jobs.find(j=>j.id===a.request_id);
       if(!job)continue;
@@ -300,6 +337,7 @@ function schedulerTick(){
           'Controllo non conclusivo: '+detail});
       processed++;
     }
+    reconcileRequests_(now_());
     return {processed,found,at:now};
   });
 }

@@ -53,7 +53,7 @@ const run=s=>vm.runInContext(s,context);
 
 test('Google Sheets creato e 6 club senza regole presunte',()=>{
   const setup=run('setupApp()');assert.match(setup.spreadsheetUrl,/docs.google.com/);
-  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.21');assert.equal(dashboard.clubs.length,6);
+  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.22');assert.equal(dashboard.clubs.length,6);
   assert.ok(dashboard.clubs.every(c=>!c.connector.ready&&c.rule_type==='unknown'));
 });
 test('Ricerca reale non simulata',()=>{
@@ -102,16 +102,23 @@ test('Scheduler live registra risultati reali invece di dichiarare una prenotazi
   assert.equal(r.found,1);
   const detail=run(`getRequestDetail('${created.id}')`);
   assert.equal(detail.clubs[0].state,'found');
+  assert.equal(detail.status,'completed_found');
   assert.match(detail.clubs[0].detail,/Campo 2/);
   assert.equal(run('schedulerTick().processed'),0); // Non duplica il controllo.
   assert.ok(!JSON.stringify(detail).includes('booked'));
 });
 test('Annullamento mantiene storico',()=>{
-  const id=run('getDashboard().jobs[0].id');
-  assert.ok(context.cancelRequest(id).ok);assert.equal(run('getDashboard().jobs[0].status'),'cancelled');
+  const id=run("getDashboard().jobs.find(j=>j.status==='pending').id");
+  assert.ok(context.cancelRequest(id).ok);assert.equal(run(`getRequestDetail('${id}').status`),'cancelled');
 });
 test('Sonda pagina pubblica su URL conosciuto, non calendario',()=>{
   const s=run(`checkPublicPortal('gunners')`);assert.equal(s.http_status,200);assert.match(s.note,/pubblica/);
   assert.throws(()=>run(`checkPublicPortal('https://myserver.example')`),/Centro non valido/);
+});
+test('Stato concluso e scadenza senza alterare lo storico',()=>{
+ const stamp='2099-11-18T23:00:00.000Z';
+ assert.equal(run("requestState_({id:'a',status:'pending',match_date:'2099-11-19',match_time:'20:00',tolerance:0},[{request_id:'a',state:'checked_no_slots'}],'"+stamp+"')"),'completed_no_slots');
+ assert.equal(run("requestState_({id:'a',status:'pending',match_date:'2099-11-18',match_time:'20:00',tolerance:30},[{request_id:'a',state:'scheduled'}],'"+stamp+"')"),'expired');
+ assert.equal(run("requestState_({id:'a',status:'pending',match_date:'2099-11-19',match_time:'20:00',tolerance:30},[{request_id:'a',state:'found'},{request_id:'a',state:'scheduled'}],'"+stamp+"')"),'pending');
 });
 console.log(`\n${passed} test superati.`);

@@ -1,10 +1,11 @@
 
-/* Padel Booking Leon — v1.21 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.22 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
   const esc = v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const state={clubs:[],jobs:[],schedulerActive:false,online:false,playtomicLive:false,courtDetails:new Map(),lastResults:[],quoteLoading:false,quoteProgress:0,quoteTotal:0};
+  state.openGroups=new Set();state.backendVersion='';
   let quoteGeneration=0;
   let bookingSelection=null;
   let bookingCheckSerial=0;
@@ -24,8 +25,8 @@
   function connection(on,msg){state.online=on;const el=$('connection');el.className='connection '+(on?'online':'offline');el.innerHTML='<i></i> '+esc(msg);}
   function ruleLabel(c){return c.rule_type==='calendar_days'?`${c.advance_value} giorni prima · ${c.release_time}`:c.rule_type==='rolling_hours'?`${c.advance_value} ore prima della partita`:'Da verificare';}
   function choices(id){
-    const previous=new Set(selected(id));
-    $(id).innerHTML=state.clubs.map(c=>`<label class="choice"><input type="checkbox" value="${esc(c.id)}" ${previous.size?previous.has(c.id)?'checked':'':c.enabled?'checked':''} ${c.enabled?'':'disabled'}><span>${esc(c.name)}</span></label>`).join('');
+    const previous=new Set(selected(id));const initialized=$(id).querySelectorAll('input').length>0;
+    $(id).innerHTML=state.clubs.map(c=>`<label class="choice"><input type="checkbox" value="${esc(c.id)}" ${initialized?previous.has(c.id)?'checked':'':c.enabled?'checked':''} ${c.enabled?'':'disabled'}><span>${esc(c.name)}</span></label>`).join('');
     if(id==='jobClubChoices'){
       const hero=$(id).querySelector('input[value="hero"]');
       if(hero){hero.checked=false;hero.disabled=true;hero.closest('label').title='Padel Hero richiede Chrome attivo e non è programmabile sul backend cloud.';}
@@ -48,7 +49,7 @@
     }).join('');
     choices('searchClubChoices');choices('jobClubChoices');
   }
-  const labels={pending:'Registrata',cancelled:'Annullata'};
+  const labels={pending:'In attesa',completed_found:'Slot trovati',completed_no_slots:'Nessuna fascia',completed_partial:'Completata con anomalie',completed_error:'Controllo non riuscito',completed_outside:'Fuori finestra',expired:'Scaduta',cancelled:'Annullata'};
   function renderJobs(){
     $('metricJobs').textContent=state.jobs.filter(j=>j.status==='pending').length;
     if(!state.jobs.length){$('jobsPanel').innerHTML='<div class="empty-state"><strong>Nessuna richiesta</strong><p>Imposti una data e salvi una richiesta.</p></div>';return;}
@@ -62,13 +63,13 @@
         return `<div class="job-row"><div class="job-main"><strong>${esc(prettyDate(j.match_date))} · ${esc(j.match_time)}</strong><small>${j.duration} min · ${esc(msg)}</small></div>
           <div class="job-cell">${j.clubs.length} centri<small>${j.clubs.map(c=>esc(c.name)).join(', ')}</small></div>
           <div class="job-cell">${j.mode==='auto'?'Auto futura (non attiva)':'Controllo di sola lettura'}<small>±${j.tolerance}m</small></div>
-          <div><span class="status-badge warn">${found?'Slot trovati':blocked?'Controllo non riuscito':checked?'Nessuno slot':esc(labels[j.status]||j.status)}</span></div>
+          <div><span class="status-badge warn">${esc(j.status==='pending'?(due?'In attesa': 'Regola da configurare'):(labels[j.status]||j.status))}</span></div>
           <div class="job-actions"><button type="button" class="mini-button" data-detail="${esc(j.id)}">Dettagli</button>${j.status==='pending'?`<button type="button" class="mini-button danger" data-cancel="${esc(j.id)}">Annulla</button>`:''}</div></div>`;
       }).join('');
   }
   async function loadAll(){
     try{
-      const data=await api('getDashboard');state.clubs=data.clubs;state.jobs=data.jobs;state.schedulerActive=data.schedulerActive;
+      const data=await api('getDashboard');state.clubs=data.clubs;state.jobs=data.jobs;state.schedulerActive=data.schedulerActive;state.backendVersion=data.version||'';renderComponentStatus();
       connection(true,'Google Drive collegato');renderClubs();renderJobs();schedulerState();await previewOpening();
     }catch(e){connection(false,'Configurazione richiesta');toast(e.message,true);}
   }
@@ -90,13 +91,7 @@
     if(id==='pro')return /vigatto/i.test(s.venue||'')?'Vigatto':/parma/i.test(s.venue||'')?'Parma':'Parma / Vigatto · sede da verificare';
     return 'Parma';
   }
-  function renderResults(){
-    $('searchResults').innerHTML=state.lastResults.map(r=>{
-      const club=state.clubs.find(c=>c.id===r.club_id);
-      const found=r.status==='available';
-      const status={available:'Slot compatibili',no_slots:'Nessuno slot',outside_window:'Fuori finestra',
-        auth_required:'Accesso richiesto',error:'Da verificare',not_configured:'Non collegato'}[r.status]||'Da verificare';
-      const slots=(r.slots||[]).map(s=>{
+  function resultEntry(r,s){
         const note=state.courtDetails.get(detailKey(r.club_id,s.court_id));
         const location=courtLocation(s,r.club_id,note);
         const cover=note?.cover&&note.cover!=='unknown'?note.cover:(s.cover||'unknown');
@@ -110,7 +105,7 @@
           s.quoteState==='unavailable'?'Preventivo non disponibile':
           s.quoteState==='pending'?'Verifica non avviata':
           s.quoteState==='loading'||s.quoteState==='queued'?'Lettura automatica e sicura':'Prezzo non disponibile';
-        return `<div class="slot-line">
+        const html=`<div class="slot-line">
           <div class="slot-heading"><strong>${esc(s.court)}</strong><span class="slot-time">${esc(s.start)}–${esc(s.end)}</span></div>
           <div class="slot-metadata">
             <span class="slot-chip">📍 ${esc(location)}</span>
@@ -121,12 +116,89 @@
             <button type="button" data-edit-court="${esc(s.court_id)}" data-court-club="${esc(r.club_id)}">⚙ Dettagli</button>
             <button type="button" data-booking-court="${esc(s.court_id)}" data-booking-club="${esc(r.club_id)}" data-booking-start="${esc(s.start)}">Prenota ↗</button>
           </div></div>`;
-      }).join('');
-      return `<div class="result-row ${found?'found':''}"><div class="result-body"><strong>${esc(club?.name||r.club_id)}</strong>
-        <small>${esc(r.reason)}</small>${slots?'<div class="slot-list">'+slots+'</div>':''}
-        ${!found?`<a target="_blank" rel="noopener noreferrer" href="${esc(club?.url||'#')}">Apri il portale ↗</a>`:''}
-        </div><span class="result-tag">${esc(status)}</span></div>`;
+        return {slot:s,location,cover,knownPrice:s.quotePrice||s.price||"",html};
+  }
+  function numericPrice(value){
+    const raw=String(value||'').trim().replace(/\s/g,'');
+    const match=raw.match(/^(?:€|EUR)?(\d{1,5}(?:[.,]\d{1,2})?)(?:€|EUR)?$/i);
+    return match?Number(match[1].replace(',','.')):Infinity;
+  }
+  function compactOrder(a,b,mode){
+    if(mode==='price'){
+      const left=numericPrice(a.knownPrice),right=numericPrice(b.knownPrice);
+      if(left!==right)return left-right;
+    }
+    if(mode==='time'||mode==='price')return String(a.slot.start).localeCompare(String(b.slot.start))||String(a.slot.court).localeCompare(String(b.slot.court),'it');
+    return 0;
+  }
+  function displayMinimum(entries){
+    const min=Math.min(...entries.map(x=>numericPrice(x.knownPrice)));
+    return Number.isFinite(min)?'da '+min.toLocaleString('it-IT',{maximumFractionDigits:2})+' €':'';
+  }
+  function renderResultGroups(){
+    const container=$('searchResults'),filter=$('resultCover').value,sort=$('resultSort').value;
+    // Conserva lo stato dei gruppi già visibili durante preventivi e filtri.
+    for(const d of container.querySelectorAll('details[data-result-group]')){
+      if(d.open)state.openGroups.add(d.dataset.resultGroup);else state.openGroups.delete(d.dataset.resultGroup);
+    }
+    const prepared=state.lastResults.map(r=>{
+      const club=state.clubs.find(c=>c.id===r.club_id);
+      const all=r.status==='available'?(r.slots||[]).map(s=>resultEntry(r,s)):[];
+      const entries=all.filter(x=>filter==='all'||x.cover===filter).sort((a,b)=>compactOrder(a,b,sort));
+      return {r,club,all,entries};
+    });
+    const total=prepared.reduce((s,x)=>s+x.all.length,0),shown=prepared.reduce((s,x)=>s+x.entries.length,0);
+    const n=prepared.filter(x=>x.entries.length).length;
+    $('resultsFilters').hidden=false;
+    $('resultsSummary').textContent=shown+' fasce'+(shown!==total?' su '+total:'')+' · '+n+' / '+prepared.length+' centri con disponibilità'+(prepared.some(x=>x.all.length>=30)?' · fino a 30 fasce per centro':'');
+    prepared.sort((a,b)=>Number(!!b.entries.length)-Number(!!a.entries.length)||(
+      sort==='price'?(Math.min(...a.entries.map(x=>numericPrice(x.knownPrice)))-Math.min(...b.entries.map(x=>numericPrice(x.knownPrice))))||0:
+      sort==='time'?String(a.entries[0]?.slot.start||'99:99').localeCompare(String(b.entries[0]?.slot.start||'99:99')):0
+    )||(Number(a.club?.priority)||99)-(Number(b.club?.priority)||99));
+    container.innerHTML=prepared.map(({r,club,all,entries})=>{
+      const name=esc(club?.name||r.club_id);
+      const status={available:'Slot compatibili',no_slots:'Nessuna fascia',outside_window:'Fuori finestra',auth_required:'Accesso richiesto',error:'Errore di lettura',not_configured:'Non collegato'}[r.status]||'Da verificare';
+      if(!entries.length){
+        const message=all.length?'Nessuna fascia con il filtro scelto':status;
+        return '<div class="result-empty"><div class="group-name"><strong>'+name+'</strong><small>'+esc(all.length?all.length+' fasce nascoste dal filtro':r.reason)+'</small></div><span>'+esc(message)+'</span><a target="_blank" rel="noopener noreferrer" href="'+esc(club?.url||'#')+'">Portale ↗</a></div>';
+      }
+      const venues=new Map();
+      for(const item of entries){
+        if(!venues.has(item.location))venues.set(item.location,[]);
+        venues.get(item.location).push(item);
+      }
+      const minimum=displayMinimum(entries);
+      const sites=[...venues.keys()].join(' · ');
+      let detail='';
+      for(const [venue,items] of venues){
+        if(venues.size>1)detail+='<div class="slot-venue">'+esc(venue)+' · '+items.length+' fasce</div>';
+        detail+='<div class="slot-list">'+items.map(x=>x.html).join('')+'</div>';
+      }
+      return '<details class="result-group has-slots" data-result-group="'+esc(r.club_id)+'"'+(state.openGroups.has(r.club_id)?' open':'')+'><summary><div class="group-name"><strong>'+name+'</strong><small>'+esc(sites)+'</small></div><span class="group-count">'+entries.length+' '+(entries.length===1?'fascia':'fasce')+(minimum?'<small>'+esc(minimum)+'*</small>':'')+'</span></summary><div class="group-detail"><small>'+esc(r.reason)+'</small>'+detail+(minimum?'<small>* Minimo tra i prezzi noti mostrati, da riconfermare sul portale.</small>':'')+'</div></details>';
     }).join('');
+  }
+  function setupResultControls(render){
+    $('resultCover').addEventListener('change',render);
+    $('resultSort').addEventListener('change',render);
+    for(const [id,open] of [['expandResults',true],['collapseResults',false]]){
+      $(id).addEventListener('click',()=>{
+        for(const d of $('searchResults').querySelectorAll('details[data-result-group]')){
+          d.open=open;
+          if(open)state.openGroups.add(d.dataset.resultGroup);else state.openGroups.delete(d.dataset.resultGroup);
+        }
+        if(!open)state.openGroups.clear();
+      });
+    }
+  }
+  function renderResults(){renderResultGroups();}
+  function renderComponentStatus(){
+    const el=$('componentStatus');if(!el)return;
+    const backend=state.backendVersion||'non verificato';
+    const extension=window.PBL_CHROME?.version?.()||'non rilevata';
+    el.textContent='Frontend v1.22 · Google '+backend+' · Chrome '+extension+
+      (backend!=='v1.22'?' · verificare il deployment Google':'')+
+      (extension!=='v1.22'?' · aggiornare/ricaricare l’estensione per la guida':'');
+    el.dataset.warning=String(backend!=='v1.22'||extension!=='v1.22');
   }
 
   function getBookingSlot(clubId,courtId,start){
@@ -205,7 +277,8 @@
   function buttonHandoffFailed(){return $('bookingOpen').dataset.handoffFailed==='1';}
   async function bookingOpenPortal(event){
     if(!bookingSelection)return;
-    const {club,slot}=bookingSelection;
+    const selection=bookingSelection;
+    const {club,slot}=selection;
     if(club.platform!=='Wansport'){
       // Playtomic: link ufficiale, come in v1.13.
       return;
@@ -215,8 +288,12 @@
     if(!window.PBL_CHROME?.handoff||!window.PBL_CHROME.installed())return;
     event.preventDefault();
     const button=$('bookingOpen');
-    button.textContent='Apertura…';
+    if(button.dataset.busy==='1')return;
+    button.dataset.busy='1';button.textContent='Verifica e apertura…';
     try{
+      const fresh=await api('getBookingPreflight',{club_id:club.id,court_id:String(slot.court_id),date:slot.date,start:slot.start,duration:Number(slot.duration)});
+      if(bookingSelection!==selection||!$('bookingDialog').open)return;
+      if(fresh.status!=='available'){bookingStatus('Fascia non confermata: '+(fresh.reason||'ripetere la ricerca'),'warning');return;}
       await window.PBL_CHROME.handoff({
         club_id:club.id,court_id:String(slot.court_id),tslot_id:String(slot.tslot_id||''),
         court:slot.court,date:slot.date,start:slot.start,end:slot.end,
@@ -231,7 +308,8 @@
       button.dataset.handoffFailed='1';
       button.textContent='Apri portale ufficiale ↗';
     }finally{
-      if(button.textContent==='Apertura…')button.textContent='Apri fascia su Wansport ↗';
+      button.dataset.busy='';
+      if(button.textContent==='Verifica e apertura…')button.textContent='Apri fascia su Wansport ↗';
     }
   }
   async function bookingCopy(){
@@ -266,6 +344,7 @@
   async function search(e){
     e.preventDefault();const clubs=selected('searchClubChoices');if(!clubs.length)return toast('Selezioni almeno un centro.',true);
     const generation=++quoteGeneration;
+    state.openGroups.clear();state.lastResults=[];state.quoteLoading=false;$('resultsFilters').hidden=true;$('resultsSummary').textContent='';
     const btn=$('searchBtn');btn.disabled=true;$('searchResults').textContent='Controllo dei calendari abilitati…';
     try{
       const req={date:$('searchDate').value,time:$('searchTime').value,
@@ -301,7 +380,7 @@
         });
       }
       // Aggiorna gli stati dei collegamenti Wansport senza duplicare le richieste HTTP.
-      if(clubs.some(id=>['gunners','pro','puntog'].includes(id)))await loadAll();
+      if(otherClubs.length)await loadAll();
     }catch(e){toast(e.message,true);$('searchResults').textContent=e.message;}finally{btn.disabled=false;btn.textContent='⌕ Verifica disponibilità';}
   }
   // Prezzi recuperati progressivamente, evitando richieste per ogni singola card
@@ -451,6 +530,7 @@
   }
   function setup(){
     const date=romeDate(7);['searchDate','jobDate'].forEach(id=>{$(id).min=romeDate();$(id).value=date;});clock();setInterval(clock,1000);
+    setupResultControls(renderResults);renderComponentStatus();
     $('searchForm').addEventListener('submit',search);$('jobForm').addEventListener('submit',saveRequest);
     $('wansportForm').addEventListener('submit',saveAndTestWansport);$('wansportDelete').addEventListener('click',removeWansport);
     $('courtForm').addEventListener('submit',saveCourt);
@@ -476,7 +556,7 @@
     document.querySelectorAll('input[name="jobMode"]').forEach(n=>n.addEventListener('change',()=>{
       $('autoWarning').classList.toggle('hidden',document.querySelector('input[name="jobMode"]:checked').value!=='auto');
     }));
-    document.addEventListener('pbl-chrome-ready',()=>{if(state.clubs.length)renderClubs();});
+    document.addEventListener('pbl-chrome-ready',()=>{renderComponentStatus();if(state.clubs.length)renderClubs();});
     document.addEventListener('pbl-backend-connected',loadAll);
     loadAll();
   }

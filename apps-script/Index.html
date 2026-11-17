@@ -21,6 +21,7 @@
     </header>
 
     <main id="top">
+      <div class="component-status" id="componentStatus">Controllo versione Google…</div>
       <section class="hero">
         <div class="hero-copy"><div class="eyebrow"><span class="pulse-dot"></span> IL TUO ASSISTENTE PADEL</div>
           <h1>Il campo giusto.<br><em>Al momento giusto.</em></h1>
@@ -42,6 +43,12 @@
             <div class="field full"><label>Centri da controllare</label><div class="club-choices" id="searchClubChoices"></div></div>
             <button class="btn btn-accent full" type="submit" id="searchBtn">⌕ &nbsp; Verifica disponibilità</button>
           </form>
+          <div id="resultsFilters" class="results-filters" hidden>
+            <label>Copertura<select id="resultCover"><option value="all">Tutte</option><option value="indoor">Coperti</option><option value="outdoor">Scoperti</option><option value="unknown">Da verificare</option></select></label>
+            <label>Ordina per<select id="resultSort"><option value="priority">Priorità / orario richiesto</option><option value="time">Orario</option><option value="price">Prezzo noto</option></select></label>
+            <button type="button" class="mini-button" id="expandResults">Espandi tutti</button><button type="button" class="mini-button" id="collapseResults">Comprimi tutti</button>
+          </div>
+          <div id="resultsSummary" class="results-summary" role="status"></div>
           <div id="searchResults" class="search-results" aria-live="polite"><div class="empty-inline">Selezioni data e orario per iniziare la ricerca. I centri non collegati verranno indicati come tali.</div></div>
         </article>
         <article class="panel schedule-panel" id="programmazione"><div class="section-head"><div><div class="overline">02 / AUTOMAZIONE</div><h2>Programma un controllo</h2><p>Registra su Drive un controllo di sola lettura all’apertura teorica. Non viene prenotato alcun campo.</p></div><div class="circle-icon">◷</div></div>
