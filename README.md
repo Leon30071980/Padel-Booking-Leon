@@ -1,3 +1,13 @@
+# Padel Booking Leon — v1.24
+
+## Playtomic: modalità assistita dopo HTTP 403
+
+L'accesso diretto all'endpoint Playtomic è sospeso sia nel browser sia nel cloud. L'app non tenta di aggirare il rifiuto. La ricerca Wansport mantiene il funzionamento esistente. Per Padel Hero si apre il sito ufficiale, si controllano data e blocchi bianchi e si inseriscono gli intervalli nella scheda «Importa fasce Playtomic» di GitHub Pages. L'app calcola gli orari compatibili a mezz'ora per le durate 60/90/120 e la tolleranza, con una validità locale di 10 minuti. Questi sono candidati non garantiti: verificare durata, prezzo e prenotabilità sul sito. I prezzi non sono stimati. Nessun controllo automatico di Padel Hero dal cloud o invio della prenotazione.
+
+L'estensione v1.24 aggiunge sul sito ufficiale Padel Hero «Analizza una cella»: spostare il mouse sopra una cella libera, premere F8 e copiare la diagnosi. Lo strumento raccoglie esclusivamente struttura tecnica, nomi degli attributi e geometria della cella selezionata, senza leggere testi, valori di attributi o dati personali, senza cliccare o chiamare API. La struttura reale e qualsiasi eventuale trasferta automatica dei dati visibili restano da collaudare e verificare rispetto alle condizioni del servizio. Ricaricare l'estensione dalla cartella Google Drive e fare Ctrl+F5 su GitHub Pages. Non occorre riconfigurare Apps Script o le credenziali.
+
+---
+
 # Padel Booking Leon — v1.22
 
 ## Consolidamento e risultati compatti

@@ -1,4 +1,4 @@
-/* v1.23 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
+/* v1.24 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
@@ -28,18 +28,10 @@
   }).finally(()=>{probing=null;});
   return probing;
  }
- async function query(q){
-  if(!ready && !(await probe()))throw Error('Estensione Padel Booking Leon non rilevata in Chrome. Installarla per leggere Padel Hero.');
-  const id=++serial;
-  return new Promise((resolve,reject)=>{
-   const timer=setTimeout(()=>{pending.delete(id);reject(Error('Nessuna risposta dall’estensione Chrome entro 25 secondi.'));},25000);
-   pending.set(id,{resolve,reject,timer});
-   send('query',{id,query:{date:q.date,time:q.time,duration:Number(q.duration),tolerance:Number(q.tolerance)}});
-  });
- }
+ async function query(){throw Error('Accesso API Playtomic sospeso. Utilizzi la modalità assistita.');}
  async function handoff(details){
   if(!ready && !(await probe()))throw Error('Estensione Chrome non rilevata. Aggiorni il repository, ricarichi l’estensione e aggiorni questa pagina.');
-  if(!['v1.22','v1.23'].includes(extensionVersion)||!capabilities.has('wansport-handoff'))throw Error('L’estensione Chrome '+(extensionVersion||'installata')+' non supporta la guida Wansport. Ricarichi l’estensione dalla cartella Google Drive in chrome://extensions, poi Ctrl+F5 su questa pagina.');
+  if(!['v1.22','v1.24'].includes(extensionVersion)||!capabilities.has('wansport-handoff'))throw Error('L’estensione Chrome '+(extensionVersion||'installata')+' non supporta la guida Wansport. Ricarichi l’estensione dalla cartella Google Drive in chrome://extensions, poi Ctrl+F5 su questa pagina.');
   const id=++serial;
   return new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>{pending.delete(id);reject(Error('L’estensione non ha aperto Wansport entro 15 secondi.'));},15000);

@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.23 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.24 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G/Don Bosco/Inzani da validare.
  */
-const PBL_VERSION = 'v1.23';
+const PBL_VERSION = 'v1.24';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -150,7 +150,7 @@ function setupApp(){
     return {version:PBL_VERSION,spreadsheetUrl:ss.getUrl(),message:'Archivio pronto. Nessuna prenotazione reale abilitata.'};
   });
 }
-// v1.23: conserva lo storico; nessuna cancellazione delle richieste esistenti.
+// v1.24: conserva lo storico; nessuna cancellazione delle richieste esistenti.
 function requestState_(job,attempts,now){
   if(job.status!=='pending')return job.status;
   const rows=attempts.filter(a=>a.request_id===job.id);
@@ -232,7 +232,7 @@ function searchAvailability(payload){
 }
 function createRequest(payload){
   const r=normalizeRequest_(payload);
-  if(r.clubs.includes('hero'))throw Error('Padel Hero richiede Chrome aperto: i controlli programmati dal cloud non sono disponibili.');
+  if(r.clubs.includes('hero'))throw Error('Padel Hero è disponibile soltanto con verifica assistita: i controlli programmati non sono disponibili.');
   return withLock_(()=>{
     reconcileRequests_(now_());
     const jobs=records_('Requests');

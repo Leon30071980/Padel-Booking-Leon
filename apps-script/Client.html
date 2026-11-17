@@ -1,5 +1,5 @@
 <script>
-/* Padel Booking Leon — v1.23 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.24 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -36,12 +36,12 @@
     $('clubGrid').innerHTML=state.clubs.map(c=>{
       const connected=c.connector.ready, configured=c.connector.configured;
       const isWS=c.platform==='Wansport';
-      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):connected?'Calendario Playtomic verificato':'Verifica disponibilità Playtomic necessaria';
+      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):'Solo calendario ufficiale · importazione su GitHub';
       return `<article class="club-card"><div class="club-top"><span class="platform-tag">${esc(c.platform)}</span><span class="club-priority">PRIORITÀ ${c.priority}</span></div>
       <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
       <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
       <div class="club-actions"><button type="button" class="btn btn-outline" data-edit-club="${esc(c.id)}">⚙ Regole</button><a class="btn btn-outline" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">↗ Sito</a></div>
-      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">🔎 Verifica Playtomic</button>'}</article>`;
+      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">ℹ Importazione su GitHub</button>'}</article>`;
     }).join('');
     choices('searchClubChoices');choices('jobClubChoices');
   }
@@ -66,7 +66,7 @@
   async function loadAll(){
     try{
       const data=await api('getDashboard');state.clubs=data.clubs;state.jobs=data.jobs;state.schedulerActive=data.schedulerActive;
-      $('componentStatus').textContent='Interfaccia Google v1.23 · Backend '+(data.version||'non verificato');$('componentStatus').dataset.warning=String(data.version!=='v1.23');
+      $('componentStatus').textContent='Interfaccia Google v1.24 · Backend '+(data.version||'non verificato');$('componentStatus').dataset.warning=String(data.version!=='v1.24');
       connection(true,'Google Drive collegato');renderClubs();renderJobs();schedulerState();await previewOpening();
     }catch(e){connection(false,'Configurazione richiesta');toast(e.message,true);}
   }
@@ -206,14 +206,7 @@
   async function probe(id){toast('Controllo della sola pagina pubblica…');try{const data=await api('checkPublicPortal',id);
       toast(data.reachable?`Portale raggiungibile (HTTP ${data.http_status}); calendario non verificato.`:data.note,!data.reachable);
     }catch(e){toast(e.message,true);}}
-  async function probePlaytomic(){
-    toast('Verifica del calendario Playtomic dal cloud…');
-    try{
-      const result=await api('testPlaytomicConnection');
-      toast(result.ok?'Playtomic collegato: calendario JSON accessibile.':
-        'Playtomic non verificato: '+result.note,!result.ok);
-      await loadAll();
-    }catch(err){toast(err.message,true);}
+  function probePlaytomic(){toast('Playtomic: apra il calendario ufficiale o usi l’importazione assistita su GitHub Pages.');
   }
   async function scheduler(enabled){
     try{const data=await api(enabled?'installScheduler':'removeScheduler');state.schedulerActive=data.installed;schedulerState();toast(enabled?'Trigger di controllo attivato':'Trigger disattivato');}

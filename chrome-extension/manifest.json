@@ -1,11 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Padel Booking Leon - Playtomic e Wansport",
-  "version": "1.22.0",
-  "description": "Disponibilità Playtomic e prenotazione assistita su Pro Padel Wansport con conferma esplicita.",
-  "host_permissions": [
-    "https://playtomic.com/*"
-  ],
+  "version": "1.24.0",
+  "description": "Wansport: guida alla prenotazione. Playtomic: diagnosi assistita del calendario visibile.",
+  "host_permissions": [],
   "background": {
     "service_worker": "background.js"
   },
@@ -30,6 +28,15 @@
       "js": [
         "wansport-handoff.js",
         "wansport-booking.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://playtomic.com/clubs/padel-hero-parma*"
+      ],
+      "js": [
+        "playtomic-inspector.js"
       ],
       "run_at": "document_idle"
     }

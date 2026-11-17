@@ -53,12 +53,12 @@ const run=s=>vm.runInContext(s,context);
 
 test('Google Sheets creato e 6 club senza regole presunte',()=>{
   const setup=run('setupApp()');assert.match(setup.spreadsheetUrl,/docs.google.com/);
-  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.23');assert.equal(dashboard.clubs.length,6);
+  const dashboard=run('getDashboard()');assert.equal(dashboard.version,'v1.24');assert.equal(dashboard.clubs.length,6);
   assert.ok(dashboard.clubs.every(c=>!c.connector.ready&&c.rule_type==='unknown'));
 });
 test('Ricerca reale non simulata',()=>{
   const result=run(`searchAvailability({date:'2099-11-17',time:'20:00',duration:90,tolerance:30,clubs:['gunners','hero']})`);
-  assert.equal(result.results.length,2);assert.equal(result.results[0].status,'auth_required');assert.equal(result.results[1].status,'error');
+  assert.equal(result.results.length,2);assert.equal(result.results[0].status,'auth_required');assert.equal(result.results[1].status,'manual_required');
   assert.ok(result.results.every(r=>r.slots.length===0));
 });
 test('Finestra a giorni di calendario Europe/Rome',()=>{
@@ -79,7 +79,7 @@ test('Richiesta salvata, duplicati bloccati',()=>{
   assert.throws(()=>run(`createRequest(${req})`),/Esiste già/);
 });
 test('Padel Hero non puo essere programmato dal cloud Google',()=>{
-  assert.throws(()=>run(`createRequest({date:'2099-11-17',time:'19:00',duration:90,tolerance:0,clubs:['hero']})`),/Chrome aperto/);
+  assert.throws(()=>run(`createRequest({date:'2099-11-17',time:'19:00',duration:90,tolerance:0,clubs:['hero']})`),/verifica assistita/);
 });
 test('Trigger idempotente e disattivabile',()=>{
   run('installScheduler()');run('installScheduler()');assert.equal(triggers.length,1);run('removeScheduler()');assert.equal(triggers.length,0);
