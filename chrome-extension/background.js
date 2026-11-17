@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.24 · MV3: Playtomic assistito; Wansport invariato. */
+/* Padel Booking Leon v1.25 · MV3: Playtomic assistito; Wansport invariato. */
 'use strict';
 const CHANNEL='pbl-playtomic-chrome-v1';
 const ORIGIN='https://leon30071980.github.io';

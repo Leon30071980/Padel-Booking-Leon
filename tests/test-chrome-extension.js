@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'1.24.0');
+assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'1.25.0');
 assert.deepEqual(manifest.host_permissions,[]);assert.equal(manifest.content_scripts.length,3);
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('wansport-booking.js')));
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('playtomic-inspector.js')));
@@ -14,4 +14,18 @@ assert.equal(result.ok,false);assert.match(result.error,/sospeso/);assert.equal(
 const inspector=fs.readFileSync('chrome-extension/playtomic-inspector.js','utf8');
 new vm.Script(inspector);assert.doesNotMatch(inspector,/\bfetch\s*\(|XMLHttpRequest|\.click\s*\(/);
 assert.match(inspector,/e.key!=='F8'/);assert.match(inspector,/navigator.clipboard.writeText\(report\)/);
-console.log('Chrome v1.24: API disattivata e diagnostica manuale in sola lettura.');
+console.log('Chrome v1.25: API disattivata e diagnostica manuale in sola lettura.');
+
+const helper=inspector.slice(inspector.indexOf(' function safeSlotValue('),inspector.indexOf(' function describe('));
+const hc=vm.createContext({String,Number,Math});
+vm.runInContext(helper,hc);
+assert.equal(hc.safeSlotValue('20:30:00','time'),'20:30:00');
+assert.equal(hc.safeSlotValue('fake secret','time'),'');
+assert.equal(hc.safeSlotValue('90','duration'),'90');
+assert.equal(hc.safeSlotValue('PADEL','sport'),'PADEL');
+assert.equal(hc.makeSlotLine({time:'20:30:00',duration:'90',sport:'PADEL'},'CAMPO 6 INDOOR'),'CAMPO 6 INDOOR;20:30;22:00;coperto;slot');
+assert.equal(hc.makeSlotLine({time:'20:30',duration:'5400',sport:'PADEL'},'CAMPO 6 INDOOR'),'');
+assert.equal(hc.makeSlotLine({time:'20:30',duration:'90',sport:'TENnis'},'CAMPO 6'),'');
+assert.match(inspector,/target\.closest\('\[data-slot-id\]/);
+assert.doesNotMatch(inspector,/getAttribute\('data-slot-id'\)/);
+console.log('v1.25: metadati ammessi e copia di una singola fascia.');

@@ -1,3 +1,13 @@
+# Padel Booking Leon — v1.25
+
+## Diagnostica Playtomic della singola fascia
+
+Sul calendario ufficiale Padel Hero: Analizza una cella, puntare una fascia bianca e premere F8. Il diagnostico mostra solo valori ammessi di ora, durata, sport e, se riconoscibile, il titolo del campo. Nessun ID della fascia viene esportato. Se riconosce tutti i campi, «Copia fascia per l’app» produce una riga con suffisso ;slot. Incollarla in Importa fasce Playtomic sull’app GitHub e confermare data, ora, durata e campo effettivamente visibili. Una fascia identificata non viene suddivisa né convertita in una durata differente. Il prezzo resta da verificare sul portale.
+
+La lettura del singolo elemento avviene solo dopo selezione manuale; accesso diretto API sospeso, nessuna scansione dell’intero calendario e nessuna prenotazione Playtomic automatica. Il riconoscimento dei formati e del titolo del campo richiede collaudo sulla pagina reale. Wansport resta invariato. Aggiornare l’estensione dalla cartella Drive e Ctrl+F5 sui siti.
+
+---
+
 # Padel Booking Leon — v1.24
 
 ## Playtomic: modalità assistita dopo HTTP 403

@@ -1,4 +1,4 @@
-/** Padel Booking Leon v1.24 — Playtomic: lettura diretta sospesa dopo HTTP 403. */
+/** Padel Booking Leon v1.25 — Playtomic: lettura diretta sospesa dopo HTTP 403. */
 function playtomicConnectionStatus_(){
   return {configured:true,ready:false,booking_ready:false,last_verified:null,
     reason:'Accesso API sospeso. Calendario ufficiale e importazione assistita su GitHub Pages.'};

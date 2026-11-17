@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.24 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.25 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -48,10 +48,11 @@
     return lines.map((line,i)=>{
       const p=line.split(';').map(x=>x.trim());
       const court=p[0],start=heroMinutes(p[1]),end=heroMinutes(p[2]),roof=String(p[3]||'').toLowerCase();
-      if(p.length<3||p.length>4||!court||court.length>90||!Number.isFinite(start)||!Number.isFinite(end)||
-         end<=start||start%30||end%30||!['','coperto','scoperto','indoor','outdoor'].includes(roof))
+      const exact=p[4]==='slot';
+      if(p.length<3||p.length>5||(p.length===5&&!exact)||!court||court.length>90||!Number.isFinite(start)||!Number.isFinite(end)||
+         end<=start||(exact?![60,90,120].includes(end-start):(start%30||end%30))||!['','coperto','scoperto','indoor','outdoor'].includes(roof))
         throw Error('Riga '+(i+1)+': formato Campo;19:00;22:00;coperto (orari a mezz’ora).');
-      return {court,start,end,cover:['coperto','indoor'].includes(roof)?'indoor':['scoperto','outdoor'].includes(roof)?'outdoor':'unknown'};
+      return {court,start,end,exact,cover:['coperto','indoor'].includes(roof)?'indoor':['scoperto','outdoor'].includes(roof)?'outdoor':'unknown'};
     });
   }
   function heroCandidates(snapshot,req,now=Date.now()){
@@ -61,7 +62,9 @@
     if(!Number.isFinite(target)||![60,90,120].includes(duration)||![0,15,30,60].includes(tolerance))return base;
     const out=new Map();
     for(const r of snapshot.ranges){
+      if(r.exact&&r.end-r.start!==duration)continue;
       for(let t=r.start;t+duration<=r.end;t+=30){
+        if(r.exact&&t!==r.start)break;
         if(Math.abs(t-target)>tolerance)continue;
         const key=r.court.toLowerCase()+'|'+t;
         out.set(key,{club_id:'hero',court_id:'manual:'+r.court.toLowerCase(),court:r.court,location:'San Prospero',date:snapshot.date,
@@ -71,7 +74,7 @@
     const slots=[...out.values()].sort((a,b)=>Math.abs(heroMinutes(a.start)-target)-Math.abs(heroMinutes(b.start)-target)||
       a.start.localeCompare(b.start)||a.court.localeCompare(b.court,'it')).slice(0,30);
     return {...base,status:slots.length?'available':'manual_required',slots,manual:true,
-      reason:slots.length?'Fasce candidate ricavate dagli intervalli inseriti a mano; durata, prezzo e prenotabilità da confermare su Playtomic.':
+      reason:slots.length?'Fasce candidate ricavate da celle selezionate o intervalli inseriti a mano; data, durata, prezzo e prenotabilità da confermare su Playtomic.':
       'Nessuna corrispondenza negli intervalli inseriti: il calendario completo non è stato verificato.'};
   }
   function heroStatus(){
@@ -82,7 +85,7 @@
   function openHeroImport(){
     const req=lastSearchRequest||{date:$('searchDate').value,time:$('searchTime').value,duration:$('searchDuration').value,tolerance:$('searchTolerance').value};
     $('heroDate').value=req.date;$('heroRanges').value='';$('heroConfirm').checked=false;
-    $('heroImportNote').textContent='Controlli sul sito la data '+prettyDate(req.date)+' e inserisca solo gli intervalli bianchi continui. Nessun prezzo è stimato.';
+    $('heroImportNote').textContent='Controlli sul sito la data '+prettyDate(req.date)+' e incolli le fasce copiate dal diagnostico, oppure inserisca gli intervalli bianchi continui. Nessun prezzo è stimato.';
     $('heroImportDialog').showModal();
   }
   function saveHeroImport(e){
@@ -262,10 +265,10 @@
     const el=$('componentStatus');if(!el)return;
     const backend=state.backendVersion||'non verificato';
     const extension=window.PBL_CHROME?.version?.()||'non rilevata';
-    el.textContent='Frontend v1.24 · Google '+backend+' · Chrome '+extension+
-      (backend!=='v1.24'?' · verificare il deployment Google':'')+
-      (!['v1.24'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
-    el.dataset.warning=String(backend!=='v1.24'||!['v1.24'].includes(extension));
+    el.textContent='Frontend v1.25 · Google '+backend+' · Chrome '+extension+
+      (backend!=='v1.25'?' · verificare il deployment Google':'')+
+      (!['v1.24','v1.25'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
+    el.dataset.warning=String(backend!=='v1.25'||!['v1.24','v1.25'].includes(extension));
   }
 
   function getBookingSlot(clubId,courtId,start){
