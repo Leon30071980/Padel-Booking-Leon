@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.22 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.23 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -10,6 +10,8 @@
   let bookingSelection=null;
   let bookingCheckSerial=0;
   let toastTimer;
+  let heroProbe=null,heroProbeStarted=false,heroLateRetry=false,heroSerial=0;
+  state.heroPhase='waiting';state.heroCheckedAt='';state.heroError='';
   function api(functionName,...args){
     return window.PBL_BACKEND.call(functionName,...args);
   }
@@ -33,6 +35,21 @@
     }
   }
   function selected(id){return Array.from($(id).querySelectorAll('input:checked:not(:disabled)')).map(e=>e.value);}
+  function heroStatus(){
+    if(state.heroPhase==='checking')return 'Verifica automatica Playtomic in corso…';
+    if(state.heroPhase==='missing')return 'Estensione Chrome non rilevata';
+    if(state.heroPhase==='error')return 'Calendario non verificato: '+state.heroError;
+    if(state.playtomicLive)return 'Calendario Playtomic verificato · '+prettyStamp(state.heroCheckedAt);
+    return window.PBL_CHROME?.installed()?'Estensione rilevata · verifica in attesa':'In attesa dell’estensione Chrome';
+  }
+  function heroResult(result,serial){
+    if(serial!==heroSerial)return;
+    state.playtomicLive=!!result&&result.club_id==='hero'&&['available','no_slots'].includes(result.status);
+    state.heroPhase=state.playtomicLive?'ready':'error';
+    state.heroCheckedAt=state.playtomicLive?(result.checked_at||new Date().toISOString()):'';
+    state.heroError=state.playtomicLive?'':String(result?.reason||'Risposta inattesa da Playtomic').slice(0,220);
+    if(state.clubs.length)renderClubs();
+  }
   function renderClubs(){
     $('metricClubs').textContent=state.clubs.length;
     const verified=state.clubs.filter(c=>c.id==='hero'?state.playtomicLive:c.connector.ready).length;
@@ -40,12 +57,12 @@
     $('clubGrid').innerHTML=state.clubs.map(c=>{
       const connected=c.platform==='Playtomic'?state.playtomicLive:c.connector.ready, configured=c.connector.configured;
       const isWS=c.platform==='Wansport';
-      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):(connected?'Calendario Playtomic letto da Chrome':window.PBL_CHROME?.installed()?'Estensione Chrome rilevata: verificare il calendario':'Estensione Chrome necessaria su questo dispositivo');
+      const status=isWS?(connected?'Ultimo calendario verificato':configured?'Credenziali inserite: verifica necessaria':'Configurare l’accesso'):heroStatus();
       return `<article class="club-card"><div class="club-top"><span class="platform-tag">${esc(c.platform)}</span><span class="club-priority">PRIORITÀ ${c.priority}</span></div>
       <h3>${esc(c.name)}</h3><div class="club-status ${connected?'ready':''}"><i></i>${esc(status)}</div>
       <div class="rule-details"><span>REGOLA DI APERTURA</span><strong>${esc(ruleLabel(c))}</strong></div>
       <div class="club-actions"><button type="button" class="btn btn-outline" data-edit-club="${esc(c.id)}">⚙ Regole</button><a class="btn btn-outline" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">↗ Sito</a></div>
-      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'">🧩 Verifica estensione Chrome</button>'}</article>`;
+      ${isWS?'<button type="button" class="mini-button probe" data-connect-wansport="'+esc(c.id)+'">🔐 Configura / prova Wansport</button>':'<button type="button" class="mini-button probe" data-playtomic-test="'+esc(c.id)+'" '+(state.heroPhase==='checking'?'disabled':'')+'>'+ (state.heroPhase==='checking'?'⏳ Verifica in corso…':'↻ Ricontrolla Playtomic')+'</button>'}</article>`;
     }).join('');
     choices('searchClubChoices');choices('jobClubChoices');
   }
@@ -195,10 +212,10 @@
     const el=$('componentStatus');if(!el)return;
     const backend=state.backendVersion||'non verificato';
     const extension=window.PBL_CHROME?.version?.()||'non rilevata';
-    el.textContent='Frontend v1.22 · Google '+backend+' · Chrome '+extension+
-      (backend!=='v1.22'?' · verificare il deployment Google':'')+
-      (extension!=='v1.22'?' · aggiornare/ricaricare l’estensione per la guida':'');
-    el.dataset.warning=String(backend!=='v1.22'||extension!=='v1.22');
+    el.textContent='Frontend v1.23 · Google '+backend+' · Chrome '+extension+
+      (backend!=='v1.23'?' · verificare il deployment Google':'')+
+      (!['v1.22','v1.23'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
+    el.dataset.warning=String(backend!=='v1.23'||!['v1.22','v1.23'].includes(extension));
   }
 
   function getBookingSlot(clubId,courtId,start){
@@ -351,13 +368,19 @@
         duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value)};
       const otherClubs=clubs.filter(id=>id!=='hero');
       // Wansport resta sul backend Google; Playtomic viene letto SOLO nel Chrome locale.
+      const searchHeroSerial=clubs.includes('hero')?++heroSerial:0;
+      if(searchHeroSerial){state.heroPhase='checking';state.playtomicLive=false;renderClubs();}
       const work=clubs.map(id=>id==='hero'
-        ?window.PBL_CHROME.query(req).catch(err=>({club_id:'hero',status:'error',slots:[],
-          reason:err.message||'Estensione Chrome non disponibile.'}))
+        ?(async()=>{
+          if(heroProbe)await heroProbe; // non eseguire due letture Playtomic simultanee
+          const result=await window.PBL_CHROME.query(req).catch(err=>({club_id:'hero',status:'error',slots:[],
+            reason:err.message||'Estensione Chrome non disponibile.'}));
+          heroResult(result,searchHeroSerial);return result;
+        })()
         :Promise.resolve(null));
       const remote=otherClubs.length?await api('searchAvailability',{...req,clubs:otherClubs}):{results:[]};
       const heroResults=await Promise.all(work);
-      if(clubs.includes('hero'))state.playtomicLive=heroResults.some(r=>r&&r.club_id==='hero'&&['available','no_slots'].includes(r.status));
+
       const remoteById=new Map(remote.results.map(r=>[r.club_id,r]));
       const hero=heroResults.find(r=>r&&r.club_id==='hero');
       const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
@@ -473,22 +496,34 @@
   async function probe(id){toast('Controllo della sola pagina pubblica…');try{const data=await api('checkPublicPortal',id);
       toast(data.reachable?`Portale raggiungibile (HTTP ${data.http_status}); calendario non verificato.`:data.note,!data.reachable);
     }catch(e){toast(e.message,true);}}
-  async function probePlaytomic(){
-    const installed=await window.PBL_CHROME.probe();
-    if(!installed){
-      toast('Estensione Chrome assente. Installarla seguendo le istruzioni del repository.',true);
-      return;
-    }
-    toast('Estensione rilevata. Controllo Playtomic da Chrome…');
-    try{
-      const result=await window.PBL_CHROME.query({
-        date:romeDate(1),time:'19:00',duration:90,tolerance:60
-      });
-      state.playtomicLive=['available','no_slots'].includes(result.status);
-      toast(result.status==='available'?'Playtomic accessibile da Chrome: slot ottenuti.':
-        'Estensione funzionante: nessuno slot compatibile per il test.');
-      renderClubs();
-    }catch(err){state.playtomicLive=false;toast(err.message,true);renderClubs();}
+  function probePlaytomic(silent=false){
+    if(heroProbe)return heroProbe;
+    if($('searchBtn')?.disabled)return Promise.resolve();
+    heroProbeStarted=true;
+    const serial=++heroSerial;
+    state.heroPhase='checking';state.playtomicLive=false;state.heroError='';
+    if(state.clubs.length)renderClubs();
+    heroProbe=(async()=>{
+      try{
+        const installed=await window.PBL_CHROME.probe();
+        if(serial!==heroSerial)return;
+        if(!installed){
+          state.heroPhase='missing';state.playtomicLive=false;
+          if(!silent)toast('Estensione Chrome non rilevata. Ricarichi l’estensione e la pagina.',true);
+          return;
+        }
+        const result=await window.PBL_CHROME.query({date:romeDate(1),time:'19:00',duration:90,tolerance:60});
+        heroResult(result,serial);
+        if(!silent&&serial===heroSerial)toast(state.playtomicLive?'Calendario Playtomic accessibile da Chrome.':state.heroError,!state.playtomicLive);
+      }catch(err){
+        heroResult({club_id:'hero',status:'error',reason:err.message},serial);
+        if(!silent&&serial===heroSerial)toast(err.message,true);
+      }finally{
+        heroProbe=null;renderComponentStatus();
+        if(state.clubs.length)renderClubs();
+      }
+    })();
+    return heroProbe;
   }
   async function scheduler(enabled){
     try{const data=await api(enabled?'installScheduler':'removeScheduler');state.schedulerActive=data.installed;schedulerState();toast(enabled?'Trigger di controllo attivato':'Trigger disattivato');}
@@ -556,9 +591,12 @@
     document.querySelectorAll('input[name="jobMode"]').forEach(n=>n.addEventListener('change',()=>{
       $('autoWarning').classList.toggle('hidden',document.querySelector('input[name="jobMode"]:checked').value!=='auto');
     }));
-    document.addEventListener('pbl-chrome-ready',()=>{renderComponentStatus();if(state.clubs.length)renderClubs();});
+    document.addEventListener('pbl-chrome-ready',()=>{renderComponentStatus();if(state.clubs.length)renderClubs();
+      if(heroProbeStarted&&!heroProbe&&!heroLateRetry&&state.heroPhase==='missing'){heroLateRetry=true;probePlaytomic(true);}
+    });
     document.addEventListener('pbl-backend-connected',loadAll);
     loadAll();
+    probePlaytomic(true);
   }
   document.addEventListener('DOMContentLoaded',setup);
 })();

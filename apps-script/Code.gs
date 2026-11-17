@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.22 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.23 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G/Don Bosco/Inzani da validare.
  */
-const PBL_VERSION = 'v1.22';
+const PBL_VERSION = 'v1.23';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -150,7 +150,7 @@ function setupApp(){
     return {version:PBL_VERSION,spreadsheetUrl:ss.getUrl(),message:'Archivio pronto. Nessuna prenotazione reale abilitata.'};
   });
 }
-// v1.22: conserva lo storico; nessuna cancellazione delle richieste esistenti.
+// v1.23: conserva lo storico; nessuna cancellazione delle richieste esistenti.
 function requestState_(job,attempts,now){
   if(job.status!=='pending')return job.status;
   const rows=attempts.filter(a=>a.request_id===job.id);
@@ -195,7 +195,7 @@ function saveClubRule(payload){
     const patch={priority:integer_(payload.priority,1,50,'Priorità'),enabled:payload.enabled===true?'true':'false',
       rule_type:payload.rule_type,advance_value:'',release_time:timeCheck_(payload.release_time||'00:01')};
     if(payload.rule_type!=='unknown')patch.advance_value=integer_(payload.advance_value,1,1440,'Anticipo');
-    // Permette di configurare i centri aggiunti in v1.22 anche su Sheets esistenti.
+    // Permette di configurare i centri aggiunti in v1.21 anche su Sheets esistenti.
     if(records_('Clubs').some(r=>r.id===payload.id))updateRow_('Clubs',payload.id,patch);
     else {
       const club=findClub_(payload.id);

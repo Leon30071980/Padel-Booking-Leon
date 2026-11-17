@@ -1,4 +1,4 @@
-/* v1.22 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
+/* v1.23 · Bridge Chrome ↔ Padel Booking Leon · nessun dato segreto. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
@@ -17,15 +17,16 @@
   else p.reject(Error(typeof msg.error==='string'?msg.error:'Impossibile leggere Playtomic.'));
  });
  function installed(){return ready;}
+ let probing=null;
  function probe(){
-  send('ping');
-  return new Promise(resolve=>{
-   if(ready){resolve(true);return;}
-   let ended=false;
-   const f=()=>{if(!ended){ended=true;clearTimeout(timer);resolve(true);}};
-   document.addEventListener('pbl-chrome-ready',f,{once:true});
-   const timer=setTimeout(()=>{ended=true;document.removeEventListener('pbl-chrome-ready',f);resolve(ready);},1300);
-  });
+  if(probing)return probing;
+  probing=new Promise(resolve=>{
+   const f=()=>{clearTimeout(timer);document.removeEventListener('pbl-chrome-ready',f);resolve(true);};
+   const timer=setTimeout(()=>{document.removeEventListener('pbl-chrome-ready',f);ready=false;extensionVersion='';capabilities.clear();resolve(false);},2000);
+   document.addEventListener('pbl-chrome-ready',f);
+   send('ping');
+  }).finally(()=>{probing=null;});
+  return probing;
  }
  async function query(q){
   if(!ready && !(await probe()))throw Error('Estensione Padel Booking Leon non rilevata in Chrome. Installarla per leggere Padel Hero.');
@@ -38,7 +39,7 @@
  }
  async function handoff(details){
   if(!ready && !(await probe()))throw Error('Estensione Chrome non rilevata. Aggiorni il repository, ricarichi l’estensione e aggiorni questa pagina.');
-  if(extensionVersion!=='v1.22'||!capabilities.has('wansport-handoff'))throw Error('L’estensione Chrome '+(extensionVersion||'installata')+' non supporta la guida Wansport. Esegua Pull origin in GitHub Desktop, poi Ricarica in chrome://extensions e Ctrl+F5 su questa pagina.');
+  if(!['v1.22','v1.23'].includes(extensionVersion)||!capabilities.has('wansport-handoff'))throw Error('L’estensione Chrome '+(extensionVersion||'installata')+' non supporta la guida Wansport. Ricarichi l’estensione dalla cartella Google Drive in chrome://extensions, poi Ctrl+F5 su questa pagina.');
   const id=++serial;
   return new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>{pending.delete(id);reject(Error('L’estensione non ha aperto Wansport entro 15 secondi.'));},15000);

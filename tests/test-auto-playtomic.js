@@ -1,0 +1,21 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+const source=fs.readFileSync('github-pages/app.js','utf8');
+const start=source.indexOf('  function probePlaytomic(silent=false)'),end=source.indexOf('  async function scheduler(',start);
+assert.ok(start>0&&end>start);
+const hstart=source.indexOf('  function heroStatus()'),hend=source.indexOf('  function renderClubs()',hstart);
+assert.ok(hstart>0&&hend>hstart);
+let probes=0,queries=0,alerts=0,reply={club_id:'hero',status:'no_slots',checked_at:'2026-11-17T12:00:00Z'},installed=true;
+let fail=false;
+const ctx=vm.createContext({Date,String,Promise,$:()=>({disabled:false}),window:{PBL_CHROME:{probe:async()=>{probes++;return installed;},query:async()=>{queries++;if(fail)throw Error('HTTP 403');return reply;}}},state:{clubs:[],heroPhase:'waiting',playtomicLive:false},heroProbe:null,heroProbeStarted:false,heroSerial:0,renderClubs(){},renderComponentStatus(){},prettyStamp:s=>s,romeDate:()=> '2026-11-18',toast(){alerts++;}});
+vm.runInContext(source.slice(hstart,hend)+source.slice(start,end),ctx);
+(async()=>{
+ const a=ctx.probePlaytomic(true),b=ctx.probePlaytomic(true);
+ assert.equal(a,b);await a;assert.equal(probes,1);assert.equal(queries,1);
+ assert.equal(ctx.state.playtomicLive,true);assert.equal(ctx.state.heroPhase,'ready');assert.equal(alerts,0);
+ reply={club_id:'hero',status:'error',reason:'HTTP 429'};await ctx.probePlaytomic(true);
+ assert.equal(ctx.state.playtomicLive,false);assert.equal(ctx.state.heroError,'HTTP 429');
+ fail=true;await ctx.probePlaytomic(true);assert.equal(ctx.state.heroPhase,'error');assert.equal(ctx.state.heroError,'HTTP 403');
+ installed=false;const prev=queries;await ctx.probePlaytomic(true);assert.equal(ctx.state.heroPhase,'missing');assert.equal(queries,prev);
+ assert.match(source,/loadAll\(\);\s*probePlaytomic\(true\);/);
+ console.log('v1.23: verifica automatica Chrome/Playtomic, deduplicazione, errori e risposta senza slot verificati.');
+})().catch(e=>{console.error(e);process.exitCode=1});
