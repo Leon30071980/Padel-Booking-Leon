@@ -1,9 +1,9 @@
 /**
- * Padel Booking Leon — v1.25 (Google Apps Script + Google Sheets)
+ * Padel Booking Leon — v1.26 (Google Apps Script + Google Sheets)
  * Web app personale: deployment Esegui come me / Accesso solo io.
  * Ricerca di sola lettura Wansport: Gunners verificato dall’utente; Pro/Punto G/Don Bosco/Inzani da validare.
  */
-const PBL_VERSION = 'v1.25';
+const PBL_VERSION = 'v1.26';
 const PBL_TZ = 'Europe/Rome';
 const PBL_CLUBS = Object.freeze([
   {id:'gunners', name:'Gunners Padel', platform:'Wansport', url:'https://gunnerspadel.wansport.com/start'},
@@ -150,7 +150,7 @@ function setupApp(){
     return {version:PBL_VERSION,spreadsheetUrl:ss.getUrl(),message:'Archivio pronto. Nessuna prenotazione reale abilitata.'};
   });
 }
-// v1.25: conserva lo storico; nessuna cancellazione delle richieste esistenti.
+// v1.26: conserva lo storico; nessuna cancellazione delle richieste esistenti.
 function requestState_(job,attempts,now){
   if(job.status!=='pending')return job.status;
   const rows=attempts.filter(a=>a.request_id===job.id);

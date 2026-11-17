@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.25 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.26 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -265,10 +265,10 @@
     const el=$('componentStatus');if(!el)return;
     const backend=state.backendVersion||'non verificato';
     const extension=window.PBL_CHROME?.version?.()||'non rilevata';
-    el.textContent='Frontend v1.25 · Google '+backend+' · Chrome '+extension+
-      (backend!=='v1.25'?' · verificare il deployment Google':'')+
-      (!['v1.24','v1.25'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
-    el.dataset.warning=String(backend!=='v1.25'||!['v1.24','v1.25'].includes(extension));
+    el.textContent='Frontend v1.26 · Google '+backend+' · Chrome '+extension+
+      (backend!=='v1.26'?' · verificare il deployment Google':'')+
+      (!['v1.24','v1.25','v1.26'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
+    el.dataset.warning=String(backend!=='v1.26'||!['v1.24','v1.26'].includes(extension));
   }
 
   function getBookingSlot(clubId,courtId,start){

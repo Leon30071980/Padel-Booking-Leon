@@ -1,3 +1,9 @@
+# Padel Booking Leon — v1.26
+
+Per una singola fascia Playtomic selezionata manualmente, il diagnostico tenta il riconoscimento del numero del campo cercando soltanto nella parte sinistra della stessa riga, anche se il titolo è troncato. Se non è riconosciuto, selezionare Campo 1–12 dal menu. Confermare il campo e la fascia visibili prima di copiare. La copertura rimane sconosciuta se non è identificabile. Nessuna scansione automatica, API o lettura dei valori identificativi della fascia. Wansport invariato.
+
+---
+
 # Padel Booking Leon — v1.25
 
 ## Diagnostica Playtomic della singola fascia
