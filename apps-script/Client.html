@@ -1,5 +1,5 @@
 <script>
-/* Padel Booking Leon — v1.27 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.28 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -66,7 +66,7 @@
   async function loadAll(){
     try{
       const data=await api('getDashboard');state.clubs=data.clubs;state.jobs=data.jobs;state.schedulerActive=data.schedulerActive;
-      $('componentStatus').textContent='Interfaccia Google v1.27 · Backend '+(data.version||'non verificato');$('componentStatus').dataset.warning=String(data.version!=='v1.27');
+      $('componentStatus').textContent='Interfaccia Google v1.28 · Backend '+(data.version||'non verificato');$('componentStatus').dataset.warning=String(data.version!=='v1.28');
       connection(true,'Google Drive collegato');renderClubs();renderJobs();schedulerState();await previewOpening();
     }catch(e){connection(false,'Configurazione richiesta');toast(e.message,true);}
   }

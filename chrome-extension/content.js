@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.27 · Ponte solo su GitHub Pages, senza token e cookie. */
+/* Padel Booking Leon v1.28 · Ponte solo su GitHub Pages, senza token e cookie. */
 (()=>{
  'use strict';
  const CHANNEL='pbl-playtomic-chrome-v1',ORIGIN='https://leon30071980.github.io';
@@ -11,7 +11,7 @@
   if(event.source!==window||event.origin!==ORIGIN)return;
   const msg=event.data;
   if(!msg||msg.channel!==CHANNEL)return;
-  if(msg.kind==='ping'){post('ready',{version:'v1.27',features:['wansport-handoff','playtomic-assisted','hero-visible-import']});return;}
+  if(msg.kind==='ping'){post('ready',{version:'v1.28',features:['wansport-handoff','playtomic-assisted','hero-visible-import']});return;}
   if(['hero-open','hero-pull'].includes(msg.kind)&&Number.isSafeInteger(msg.id)&&msg.id>0){
    chrome.runtime.sendMessage({channel:CHANNEL,kind:msg.kind,payload:msg.payload},result=>{
     const err=chrome.runtime.lastError;
@@ -38,5 +38,5 @@
    });
   }catch(err){post('result',{id:msg.id,ok:false,error:String(err.message||err).slice(0,220)});}
  });
- post('ready',{version:'v1.27',features:['wansport-handoff','playtomic-assisted','hero-visible-import']});
+ post('ready',{version:'v1.28',features:['wansport-handoff','playtomic-assisted','hero-visible-import']});
 })();

@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.27 — assistente prenotazione Pro Padel su Wansport.
+/* Padel Booking Leon v1.28 — assistente prenotazione Pro Padel su Wansport.
  * Opera soltanto nella scheda Wansport scelta dall'utente. Nessuna chiamata
  * di rete, nessuna prenotazione senza clic e conferma espliciti dell'utente.
  * NON tenta pagamenti online; fallisce in modo sicuro se il DOM è ambiguo.
@@ -229,7 +229,7 @@
     close.title='Chiudi assistente prenotazione';close.onclick=()=>{
       dismissed=true;host.remove();host=null;restoreGuide();
     };
-    const h=document.createElement('h3');h.textContent='🎾 Padel Booking Leon · v1.27';
+    const h=document.createElement('h3');h.textContent='🎾 Padel Booking Leon · v1.28';
     const intro=document.createElement('small');
     intro.textContent='Prenotazione assistita su Pro Padel. Prima la durata, poi conferma esplicita.';
     summary=document.createElement('pre');

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const manifest=JSON.parse(fs.readFileSync('chrome-extension/manifest.json','utf8'));
-assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'1.27.0');
+assert.equal(manifest.manifest_version,3);assert.equal(manifest.version,'1.28.0');
 assert.deepEqual(manifest.host_permissions,[]);assert.equal(manifest.content_scripts.length,3);
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('wansport-booking.js')));
 assert.ok(manifest.content_scripts.some(s=>s.js.includes('playtomic-inspector.js')));
@@ -12,9 +12,11 @@ const sender={id:'test-extension',tab:{id:1},url:'https://leon30071980.github.io
 let result;listeners[0]({channel:'pbl-playtomic-chrome-v1',kind:'availability'},sender,r=>{result=r;});
 assert.equal(result.ok,false);assert.match(result.error,/sospeso/);assert.equal(calls,0);
 const inspector=fs.readFileSync('chrome-extension/playtomic-inspector.js','utf8');
-new vm.Script(inspector);assert.doesNotMatch(inspector,/\bfetch\s*\(|XMLHttpRequest|\.click\s*\(/);
+new vm.Script(inspector);assert.doesNotMatch(inspector,/\bfetch\s*\(|XMLHttpRequest/);
+assert.equal((inspector.match(/\.click\s*\(/g)||[]).length,1);
+assert.match(inspector,/button\.click\(\)/);
 assert.match(inspector,/e.key!=='F8'/);assert.match(inspector,/navigator.clipboard.writeText\(report\)/);
-console.log('Chrome v1.27: API disattivata e diagnostica manuale in sola lettura.');
+console.log('Chrome v1.28: API disattivata e diagnostica manuale in sola lettura.');
 
 const helper=inspector.slice(inspector.indexOf(' function safeSlotValue('),inspector.indexOf(' const controls='));
 const hc=vm.createContext({String,Number,Math});
@@ -28,7 +30,7 @@ assert.equal(hc.makeSlotLine({time:'20:30',duration:'5400',sport:'PADEL'},'CAMPO
 assert.equal(hc.makeSlotLine({time:'20:30',duration:'90',sport:'TENnis'},'CAMPO 6'),'');
 assert.match(inspector,/target\.closest\('\[data-slot-id\]/);
 assert.doesNotMatch(inspector,/getAttribute\('data-slot-id'\)/);
-console.log('v1.27: metadati ammessi e copia di una singola fascia.');
+console.log('v1.28: metadati ammessi e copia di una singola fascia.');
 
 assert.equal(hc.normalizedCourt('CAMPO 6 INDO...').number,6);
 assert.equal(hc.normalizedCourt('CAMPO 12 INDOOR').cover,'coperto');
@@ -55,4 +57,20 @@ assert.equal(ctx.heroLines(['CAMPO 11 INDOOR;21:30;23:00;coperto;slot'],rq).leng
 assert.equal(ctx.heroLines(['CAMPO 11 INDOOR;21:30;22:30;coperto;slot'],rq),null);
 assert.equal(ctx.heroLines(['CAMPO 11 INDOOR;19:30;21:00;coperto;slot'],rq),null);
 assert.equal(ctx.heroLines(['CAMPO 13;21:30;23:00;;slot'],rq),null);
-console.log('v1.27: trasferimento locale della singola richiesta con verifica di origine, data e durata.');
+console.log('v1.28: trasferimento locale della singola richiesta con verifica di origine, data e durata.');
+
+const dateHelper=inspector.slice(inspector.indexOf(' function isoDay('),inspector.indexOf(' function romeToday('));
+const dc=vm.createContext({Date,String,Number,Object});vm.runInContext(dateHelper,dc);
+assert.equal(dc.dateLabel('mar 17 nov','2026-11-17'),'2026-11-17');
+assert.equal(dc.dateLabel('mer 18 nov','2026-11-17'),'2026-11-18');
+assert.equal(dc.dateLabel('Tue 17 Nov','2026-11-17'),'2026-11-17');
+assert.equal(dc.dateLabel('mar 18 nov','2026-11-17'),'');
+assert.equal(dc.dateLabel('ven 1 gen','2026-12-28'),'2027-01-01');
+assert.equal(dc.dateLabel('sab 5 dic','2026-11-17'),'');
+assert.equal(dc.dateLabel('lun 31 nov','2026-11-17'),'');
+assert.equal(dc.shiftDay('2026-12-31',1),'2027-01-01');
+assert.match(inspector,/settledCalendar\(expected,old\)/);
+assert.match(inspector,/if\(c\.day!==req\.date\)/);
+assert.match(inspector,/displayedCalendar\(\)\?\.day!==req\.date/);
+assert.match(inspector,/hero-assist/);
+console.log('v1.28: calendario locale, riconoscimento data, cambio anno, limite e arresto prudenziale.');

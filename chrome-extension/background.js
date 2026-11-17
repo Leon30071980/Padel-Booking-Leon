@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.27 · MV3: Playtomic assistito; Wansport invariato. */
+/* Padel Booking Leon v1.28 · MV3: Playtomic assistito; Wansport invariato. */
 'use strict';
 const CHANNEL='pbl-playtomic-chrome-v1';
 const ORIGIN='https://leon30071980.github.io';
@@ -130,7 +130,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
   });
   return true;
  }
- if(msg.kind==='hero-context'||msg.kind==='hero-import'){
+ if(msg.kind==='hero-context'||msg.kind==='hero-import'||msg.kind==='hero-assist'){
   if(!heroSender(sender)){respond({ok:false,error:'Origine non autorizzata.'});return false;}
   const key='pbl_hero_request_'+sender.tab.id;
   (async()=>{
@@ -138,6 +138,12 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
    if(!req||Date.now()-req.created>20*60000){respond({ok:false,error:'Apra Playtomic dalla ricerca Leon.'});return;}
    if(msg.kind==='hero-context'){const {appTab,created,...publicReq}=req;respond({ok:true,data:publicReq});return;}
    if(msg.payload?.key!==req.key||msg.payload?.date!==req.date){respond({ok:false,error:'Data o ricerca non corrispondente.'});return;}
+   if(msg.kind==='hero-assist'){
+    const data={date:req.date,key:req.key,at:Date.now(),error:txt(msg.payload.error,180),assist:true};
+    await chrome.storage.session.set({['pbl_hero_result_'+req.appTab]:data});
+    try{await chrome.tabs.sendMessage(req.appTab,{channel:CHANNEL,kind:'hero-imported',data});}catch{}
+    respond({ok:true});return;
+   }
    const lines=heroLines(msg.payload.lines,req);
    if(!lines){respond({ok:false,error:'Formato delle fasce non valido.'});return;}
    const seen=Number(msg.payload.seen),unrecognized=Number(msg.payload.unrecognized);

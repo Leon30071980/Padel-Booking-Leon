@@ -1,3 +1,11 @@
+# Padel Booking Leon — v1.28
+
+## Ricerca Playtomic dal pannello 01
+
+La ricerca avviata dall'utente apre il calendario pubblico nella scheda Chrome dedicata. Il connettore tenta di riconoscere la data effettiva della griglia, navigare con le frecce giornaliere visibili (massimo 14 giorni da oggi), verificare il cambio di contenuto e importare le fasce compatibili. Nessuna richiesta diretta all'API bloccata, nessuna prenotazione, nessuna attività in background. Se il riconoscimento della data o del nuovo calendario fallisce, si ferma e lascia il comando assistito v1.27. La verifica avviene soltanto sul calendario effettivamente visualizzato; i prezzi restano da confermare. Collaudo reale della navigazione necessario.
+
+---
+
 # Padel Booking Leon — v1.27
 
 ## Playtomic: trasferimento locale in un clic

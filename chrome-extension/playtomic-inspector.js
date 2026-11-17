@@ -1,4 +1,4 @@
-/* Padel Booking Leon v1.27: diagnosi manuale del calendario visibile.
+/* Padel Booking Leon v1.28: diagnosi manuale del calendario visibile.
  * Nessuna chiamata di rete, nessun click sul portale, nessun dato di sessione. */
 (()=>{
  'use strict';
@@ -10,7 +10,7 @@
  const style=document.createElement('style');
  style.textContent='section{font:13px/1.4 system-ui,sans-serif;background:#10271e;color:#e9f6ec;border:1px solid #91d48f;border-radius:10px;padding:10px;box-shadow:0 4px 18px #0005}button{font:inherit;color:#e9f6ec;background:#214a35;border:1px solid #84aa88;border-radius:6px;padding:6px;margin:3px;cursor:pointer}button:disabled{opacity:.5}p{margin:6px 0}select{max-width:100%;margin:3px;color:#e9f6ec;background:#214a35;border:1px solid #84aa88;border-radius:5px;padding:5px}';
  const box=document.createElement('section'),heading=document.createElement('strong'),msg=document.createElement('p');
- heading.textContent='Padel Booking Leon · v1.27';msg.textContent='Diagnosi del calendario: nessuna prenotazione o lettura API.';
+ heading.textContent='Padel Booking Leon · v1.28';msg.textContent='Diagnosi del calendario: nessuna prenotazione o lettura API.';
  const arm=document.createElement('button'),copy=document.createElement('button'),copySlot=document.createElement('button'),close=document.createElement('button');
  arm.textContent='Analizza una cella';copy.textContent='Copia diagnosi';copy.disabled=true;copySlot.disabled=true;copySlot.textContent='Copia fascia per l’app';close.textContent='×';close.title='Chiudi assistente';
  function safeName(s){return /^[a-z][a-z0-9_:-]{0,59}$/i.test(s)&&!/secret|auth|token|cookie|session|password|email|user|account|phone/i.test(s)?s:'[omesso]';}
@@ -122,7 +122,7 @@
  for(const field of [choose,coverSelect])field.onchange=()=>{verified.checked=false;refreshSlot();};
  verified.onchange=refreshSlot;
  function describe(el){
-  const lines=['Padel Booking Leon v1.27 — Playtomic: struttura della cella visibile','Solo metadati della cella selezionata, ora/durata/sport con formati ammessi e titolo del campo. Nessun ID privato o dato di sessione.'];
+  const lines=['Padel Booking Leon v1.28 — Playtomic: struttura della cella visibile','Solo metadati della cella selezionata, ora/durata/sport con formati ammessi e titolo del campo. Nessun ID privato o dato di sessione.'];
   const fields=slotFields(el),court=courtLabel(el);
   lines.push('Orario (valore consentito): '+(fields.time||'formato non riconosciuto'),'Durata (valore consentito): '+(fields.duration||'formato non riconosciuto'),'Sport: '+(fields.sport||'non riconosciuto'),'Campo: '+(court||'non riconosciuto'),'ID fascia: '+(el.hasAttribute('data-slot-id')?'presente (valore omesso)':'assente'));
   for(let n=el,depth=0;n instanceof Element&&n!==document.body&&depth<7;n=n.parentElement,depth++){
@@ -159,10 +159,104 @@
   try{chrome.runtime.sendMessage({channel:CHANNEL,kind,payload},r=>resolve(chrome.runtime.lastError?{ok:false,error:chrome.runtime.lastError.message}:r||{ok:false,error:'Estensione non disponibile'}));}catch(e){resolve({ok:false,error:e.message});}
  });}
  function dateText(d){return d.split('-').reverse().join('/');}
- send('hero-context').then(r=>{
+ function isoDay(d){return d.toISOString().slice(0,10);}
+ function shiftDay(day,n){const d=new Date(day+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return isoDay(d);}
+ function dateLabel(value,today){
+  const v=String(value||'').toLowerCase().trim().replace(/[.,]/g,'').replace(/\s+/g,' ');
+  const mm={gen:1,gennaio:1,jan:1,january:1,feb:2,febbraio:2,february:2,mar:3,marzo:3,march:3,apr:4,aprile:4,april:4,mag:5,maggio:5,may:5,giu:6,giugno:6,jun:6,june:6,lug:7,luglio:7,jul:7,july:7,ago:8,agosto:8,aug:8,august:8,set:9,sett:9,settembre:9,sep:9,september:9,ott:10,ottobre:10,oct:10,october:10,nov:11,novembre:11,november:11,dic:12,dicembre:12,dec:12,december:12};
+  const weekdays={lun:1,lunedì:1,mon:1,tue:2,mar:2,martedì:2,mer:3,mercoledì:3,wed:3,gio:4,giovedì:4,thu:4,ven:5,venerdì:5,fri:5,sab:6,sabato:6,sat:6,dom:0,domenica:0,sun:0};
+  const m=v.match(/^([a-zàèéìòù]+) (\d{1,2}) ([a-z]+)(?: (\d{4}))?$/);
+  if(!m||!Object.hasOwn(weekdays,m[1])||!mm[m[3]])return '';
+  const y=Number(today.slice(0,4)),candidates=[];
+  for(const year of (m[4]?[Number(m[4])]:[y-1,y,y+1])){
+   const day=String(year)+'-'+String(mm[m[3]]).padStart(2,'0')+'-'+String(Number(m[2])).padStart(2,'0');
+   const d=new Date(day+'T12:00:00Z');
+   if(Number.isFinite(d.getTime())&&isoDay(d)===day&&d.getUTCDay()===weekdays[m[1]]&&day>=shiftDay(today,-1)&&day<=shiftDay(today,14))candidates.push(day);
+  }
+  return candidates.length===1?candidates[0]:'';
+ }
+ function romeToday(){
+  const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const v=k=>p.find(x=>x.type===k).value;return v('year')+'-'+v('month')+'-'+v('day');
+ }
+ function displayedCalendar(){
+  const today=romeToday(),found=[];
+  const rows=Array.from(document.querySelectorAll('div.flex.border-b')).filter(r=>r.querySelector('.overflow-x-hidden')&&r.getClientRects().length);
+  if(rows.length<2)return null;
+  const top=rows[0].getBoundingClientRect().top;
+  for(const label of document.querySelectorAll('span,button,p,div')){
+   if(label.children.length||!label.getClientRects().length)continue;
+   const rect=label.getBoundingClientRect();
+   if(rect.bottom>top+2||top-rect.bottom>160||rect.width<20)continue;
+   const day=dateLabel(label.innerText||label.textContent,today);if(!day)continue;
+   let parent=label.parentElement;
+   for(let depth=0;parent&&depth<4;depth++,parent=parent.parentElement){
+    const buttons=Array.from(parent.querySelectorAll('button,[role="button"]')).filter(b=>b!==label&&!b.contains(label)&&b.getClientRects().length);
+    const aligned=buttons.filter(b=>{const r=b.getBoundingClientRect();const arrow=!!b.querySelector('svg')||/^(?:‹|›|❮|❯|<|>)$/.test(String(b.innerText||'').trim())||/giorno precedente|giorno successivo|previous day|next day/i.test(b.getAttribute('aria-label')||'');return arrow&&Math.abs(r.top+r.height/2-rect.top-rect.height/2)<=14&&r.width<=60&&r.height<=60;});
+    const left=aligned.filter(b=>b.getBoundingClientRect().right<=rect.left+3&&rect.left-b.getBoundingClientRect().right<45);
+    const right=aligned.filter(b=>b.getBoundingClientRect().left>=rect.right-3&&b.getBoundingClientRect().left-rect.right<45);
+    if(left.length===1&&right.length===1){found.push({day,prev:left[0],next:right[0],rows});break;}
+   }
+  }
+  return found.length===1?found[0]:null;
+ }
+ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ function calendarStamp(rows){
+  // Solo nodi e orari/durate visibili; non leggere identificativi o dati di sessione.
+  return JSON.stringify(rows.map(row=>Array.from(row.querySelectorAll('[data-tracking-property-time][data-tracking-property-duration]')).map(el=>[slotFields(el).time,slotFields(el).duration])));
+ }
+ async function settledCalendar(expected,before=null){
+  const deadline=Date.now()+10000;let last='',stableSince=0,changed=before===null;
+  while(Date.now()<deadline){
+   if(document.hidden)throw Error('Scheda Playtomic non attiva.');
+   const c=displayedCalendar();
+   if(c&&c.day===expected&&c.rows.length===12){
+    const stamp=calendarStamp(c.rows);
+    if(before!==null&&stamp!==before)changed=true;
+    const busy=c.rows.some(row=>row.closest('[aria-busy="true"]')||row.querySelector('[aria-busy="true"],[role="progressbar"]'));
+    if(!busy&&changed){
+     if(stamp!==last){last=stamp;stableSince=Date.now();}
+     else if(stableSince&&Date.now()-stableSince>=1000)return c;
+    }else{last='';stableSince=0;}
+   }else{last='';stableSince=0;}
+   await pause(250);
+  }
+  throw Error('Data o aggiornamento del calendario non verificabili.');
+ }
+ async function automaticHero(req){
+  const today=romeToday();
+  if(req.date<today||req.date>shiftDay(today,14))throw Error('Data fuori dall’intervallo di ricerca automatica di 14 giorni.');
+  let c=null;
+  for(let i=0;i<24&&!c;i++){if(document.hidden)throw Error('Scheda Playtomic non attiva.');c=displayedCalendar();if(!c)await pause(250);}
+  if(!c)throw Error('Controlli della data non riconosciuti.');
+  c=await settledCalendar(c.day);
+  for(let step=0;c.day!==req.date&&step<14;step++){
+   const dir=c.day<req.date?1:-1,expected=shiftDay(c.day,dir),button=dir>0?c.next:c.prev;
+   if(button.disabled||button.getAttribute('aria-disabled')==='true')throw Error('Giorno non accessibile dal calendario.');
+   const old=calendarStamp(c.rows);
+   // Un solo normale comando di navigazione del giorno, mai una cella o un acquisto.
+   if(!button.isConnected||document.hidden||displayedCalendar()?.day!==c.day)throw Error('Controlli del calendario non più stabili.');
+   button.click();
+   c=await settledCalendar(expected,old);
+  }
+  if(c.day!==req.date)throw Error('Data richiesta non raggiunta.');
+  const result=visibleHeroLines(document,req);
+  if(displayedCalendar()?.day!==req.date||!result.seen||result.unrecognized)throw Error('Data o fasce non verificabili integralmente.');
+  return result;
+ }
+ send('hero-context').then(async r=>{
   if(!r.ok||!r.data)return;
   request=r.data;reqText.textContent='Ricerca Leon: '+dateText(request.date)+' · '+request.time+' · '+request.duration+' min ± '+request.tolerance+' min. Selezioni questo giorno nel calendario.';
-  auto.disabled=false;
+  auto.disabled=true;
+  reqText.textContent='Ricerca automatica Leon · '+dateText(request.date)+' · '+request.time+' · '+request.duration+' min';
+  try{
+   const result=await automaticHero(request);
+   const response=await send('hero-import',{key:request.key,date:request.date,lines:result.lines,seen:result.seen,unrecognized:result.unrecognized});
+   if(!response.ok)throw Error(response.error);
+   msg.textContent=response.count+' fasce trasferite automaticamente in Leon.';
+  }catch(e){msg.textContent='Ricerca assistita: '+e.message+' Selezioni la data e usi Importa disponibilità in Leon.';
+   await send('hero-assist',{key:request.key,date:request.date,error:String(e.message||e).slice(0,180)});}
+  finally{auto.disabled=false;}
  });
  auto.onclick=async()=>{
   if(!request||!window.confirm('Il calendario Playtomic mostra il '+dateText(request.date)+'? Confermi solo se la data è esatta e il caricamento è terminato.'))return;

@@ -1,5 +1,5 @@
 
-/* Padel Booking Leon — v1.27 | Apps Script HTMLService, nessuna password nel frontend. */
+/* Padel Booking Leon — v1.28 | Apps Script HTMLService, nessuna password nel frontend. */
 (()=>{
   'use strict';
   const $ = id=>document.getElementById(id);
@@ -56,7 +56,7 @@
     });
   }
   function heroCandidates(snapshot,req,now=Date.now()){
-    const base={club_id:'hero',status:'manual_required',slots:[],reason:'Aprire Playtomic, selezionare il giorno richiesto e premere Importa disponibilità in Leon.'};
+    const base={club_id:'hero',status:'manual_required',slots:[],reason:'Ricerca sul calendario Playtomic: risultato in arrivo da Chrome. Se il controllo automatico non riesce, usare la modalità assistita sul portale.'};
     if(!snapshot||snapshot.date!==req.date||!Number.isFinite(snapshot.at)||now-snapshot.at>10*60000||now<snapshot.at)return base;
     const target=heroMinutes(req.time),duration=Number(req.duration),tolerance=Number(req.tolerance);
     if(!Number.isFinite(target)||![60,90,120].includes(duration)||![0,15,30,60].includes(tolerance))return base;
@@ -78,10 +78,12 @@
       (snapshot.visible?'Nessuna fascia compatibile riconosciuta ('+Number(snapshot.seen||0)+' offerte visibili esaminate); il calendario intero non è verificato.':'Nessuna corrispondenza nelle fasce acquisite: il calendario completo non è stato verificato.')};
   }
   function heroStatus(){
+    if(heroPending?.assist)return 'Verifica assistita necessaria · controllare la scheda Playtomic';
+    if(heroPending&&!heroPending.completed)return 'Ricerca Playtomic in corso nella scheda Chrome';
     if(heroProbe)return 'Verifica estensione Chrome in corso…';
     if(state.heroPhase==='missing')return 'Lettura assistita · estensione non rilevata';
     if(heroSnapshot?.visible&&Date.now()-heroSnapshot.at<600000)return 'Calendario del '+prettyDate(heroSnapshot.date)+' importato · da riconfermare';
-    return window.PBL_CHROME?.heroCapable?.()?'Importazione dal calendario visibile · un clic':'Aggiornare l’estensione Chrome v1.27';
+    return window.PBL_CHROME?.heroCapable?.()?'Ricerca locale dal pannello 01':'Aggiornare l’estensione Chrome v1.28';
   }
   function currentHeroRequest(){
     return {date:$('searchDate').value,time:$('searchTime').value,duration:Number($('searchDuration').value),tolerance:Number($('searchTolerance').value)};
@@ -98,20 +100,26 @@
     heroPending={key,req,opening:true,completed:false};heroSnapshot=null;
     try{
       await window.PBL_CHROME.heroOpen({...req,key});
-      if(heroPending?.key===key)toast('Playtomic aperto: selezioni '+prettyDate(req.date)+' e prema Importa disponibilità in Leon.');
+      if(heroPending?.key===key)toast('Playtomic aperto: ricerca della data '+prettyDate(req.date)+' in corso.');
     }catch(e){
       if(heroPending?.key===key){heroPending=null;toast(e.message,true);openHeroImport();}
     }finally{if(heroPending?.key===key)heroPending.opening=false;}
   }
   function receiveHero(data){
-    if(!heroPending||!data||data.key!==heroPending.key||data.date!==heroPending.req.date||!Array.isArray(data.lines)||
+    if(!heroPending||!data||data.key!==heroPending.key||data.date!==heroPending.req.date||(!data.assist&&!Array.isArray(data.lines))||
       !Number.isFinite(data.at)||Date.now()-data.at>600000||data.at>Date.now()+2000)return;
+    if(data.assist){
+      if(heroPending.completed||heroPending.assistAt===data.at)return;
+      heroPending.assist=true;heroPending.assistAt=data.at;
+      state.lastResults=state.lastResults.map(r=>r.club_id==='hero'?{...r,status:'manual_required',reason:'Verifica assistita: '+String(data.error||'Data non verificata').slice(0,180)}:r);
+      renderClubs();if(state.lastResults.length)renderResults();return;
+    }
     if(heroPending.completed&&heroSnapshot?.at===data.at)return;
     try{
       const ranges=data.lines.length?parseHeroRanges(data.lines.join('\n'),data.date):[];
       if(ranges.some(r=>!r.exact))throw Error('Formato fascia non valido.');
       heroSnapshot={date:data.date,at:data.at,ranges,visible:true,request:heroPending.req,seen:data.seen,unrecognized:data.unrecognized};
-      heroPending.completed=true;
+      heroPending.completed=true;heroPending.assist=false;
       if(state.lastResults.some(r=>r.club_id==='hero')&&lastSearchRequest&&heroFresh(lastSearchRequest)){
         state.lastResults=state.lastResults.map(r=>r.club_id==='hero'?heroCandidates(heroSnapshot,lastSearchRequest):r);
         renderResults();
@@ -130,7 +138,7 @@
   function openHeroImport(){
     const req=lastSearchRequest||{date:$('searchDate').value,time:$('searchTime').value,duration:$('searchDuration').value,tolerance:$('searchTolerance').value};
     $('heroDate').value=req.date;$('heroRanges').value='';$('heroConfirm').checked=false;
-    $('heroImportNote').textContent='Modalità manuale di riserva. Per il trasferimento automatico aggiorni Chrome v1.27 e apra la ricerca Playtomic da Leon.';
+    $('heroImportNote').textContent='Modalità manuale di riserva. Per il trasferimento automatico aggiorni Chrome v1.28 e apra la ricerca Playtomic da Leon.';
     $('heroImportDialog').showModal();
   }
   function saveHeroImport(e){
@@ -310,10 +318,10 @@
     const el=$('componentStatus');if(!el)return;
     const backend=state.backendVersion||'non verificato';
     const extension=window.PBL_CHROME?.version?.()||'non rilevata';
-    el.textContent='Frontend v1.27 · Google '+backend+' · Chrome '+extension+
-      (backend!=='v1.27'?' · verificare il deployment Google':'')+
-      (!['v1.24','v1.25','v1.26','v1.27'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
-    el.dataset.warning=String(backend!=='v1.27'||!['v1.24','v1.27'].includes(extension));
+    el.textContent='Frontend v1.28 · Google '+backend+' · Chrome '+extension+
+      (backend!=='v1.28'?' · verificare il deployment Google':'')+
+      (!['v1.24','v1.25','v1.26','v1.27','v1.28'].includes(extension)?' · aggiornare/ricaricare l’estensione per la guida':'');
+    el.dataset.warning=String(backend!=='v1.28'||!['v1.24','v1.28'].includes(extension));
   }
 
   function getBookingSlot(clubId,courtId,start){
@@ -464,13 +472,14 @@
       const otherClubs=clubs.filter(id=>id!=='hero');
       // Chrome apre il calendario ufficiale soltanto per una ricerca richiesta dall’utente.
       lastSearchRequest=req;
-      if(clubs.includes('hero')&&!heroFresh(req)){
+      if(clubs.includes('hero')){
         heroSnapshot=null;
         openHeroCalendar(req);
-      }else if(!clubs.includes('hero'))heroPending=null;
+      }else heroPending=null;
       const remote=otherClubs.length?await api('searchAvailability',{...req,clubs:otherClubs}):{results:[]};
       const remoteById=new Map(remote.results.map(r=>[r.club_id,r]));
       const hero=clubs.includes('hero')?heroCandidates(heroFresh(req)?heroSnapshot:null,req):null;
+      if(hero&&heroPending?.assist)hero.reason='Verifica assistita necessaria: apra la scheda Playtomic e confermi il giorno.';
       const results=clubs.map(id=>id==='hero'?hero:remoteById.get(id)).filter(Boolean);
       if(clubs.includes('hero'))renderClubs();
       state.lastResults=results;
@@ -653,7 +662,7 @@
       if(t.dataset.detail)detail(t.dataset.detail);
       if(t.dataset.cancel)cancel(t.dataset.cancel);
       if(t.dataset.probe)probe(t.dataset.probe);
-      if(t.dataset.playtomicTest)openHeroCalendar(lastSearchRequest||currentHeroRequest());
+      if(t.dataset.playtomicTest)openHeroCalendar(currentHeroRequest());
       if(t.dataset.connectWansport)showWansport(t.dataset.connectWansport);
       if(t.dataset.close)$(t.dataset.close).close();
     });

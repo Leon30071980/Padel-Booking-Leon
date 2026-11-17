@@ -7,4 +7,4 @@ for(const cmd of ['playtomicConnectionStatus_()','searchPlaytomic_({})','testPla
  if(r.status)assert.equal(r.status,'manual_required');
  if(r.slots)assert.equal(r.slots.length,0);
 }
-assert.equal(calls,0);console.log('Playtomic v1.27: cloud sospeso, nessuna richiesta diretta.');
+assert.equal(calls,0);console.log('Playtomic v1.28: cloud sospeso, nessuna richiesta diretta.');

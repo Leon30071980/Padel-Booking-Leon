@@ -35,5 +35,5 @@ assert.equal(res.ok,true);assert.equal(res.count,1);assert.equal(messages.length
 const pulled=await message('hero-pull',null,app);assert.equal(pulled.data.key,req.key);
 assert.equal((await message('hero-pull',null,{...app,tab:{id:99}})).data,null);
 const empty=await message('hero-import',{key:req.key,date:req.date,lines:[],seen:4,unrecognized:0},portal);assert.equal(empty.ok,true);assert.equal(empty.count,0);
-console.log('v1.27: apertura calendario, isolamento schede, data, deduplicazione, ritorno all’app e zero fasce verificati.');
+console.log('v1.28: apertura calendario, isolamento schede, data, deduplicazione, ritorno all’app e zero fasce verificati.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
